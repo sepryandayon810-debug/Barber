@@ -188,7 +188,10 @@
                   <h2 class="panel-title">Daftar Akun Pengguna</h2>
                   <p class="panel-sub" id="user-mgmt-sub"></p>
                 </div>
-                <button type="button" id="btn-add-user" class="btn btn-primary btn-sm">Tambah Akun</button>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <a href="./page-akun.html" class="btn btn-outline btn-sm">Buka Kelola Akun Lengkap</a>
+                  <button type="button" id="btn-add-user" class="btn btn-primary btn-sm">Tambah Akun</button>
+                </div>
               </div>
               <div class="table-wrap">
                 <table class="data-table">
@@ -242,6 +245,7 @@
               <label class="form-label" for="u-password">Password / PIN Awal</label>
               <input type="password" id="u-password" class="input" minlength="4" placeholder="Minimal 4 karakter" required />
             </div>
+            <div id="u-form-error" class="notice error hidden"></div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline" id="cancel-user-modal">Batal</button>
@@ -498,22 +502,31 @@
 
           document.getElementById('user-form').addEventListener('submit', async function (e) {
             e.preventDefault();
-            var salt = 's_' + Math.random().toString(36).slice(2, 8);
-            var passHash = await RBAC.hashPassword(document.getElementById('u-password').value, salt);
-            var newUser = {
-              id: DB.generateId('usr'),
-              name: document.getElementById('u-name').value.trim(),
-              username: document.getElementById('u-username').value.trim().toLowerCase(),
-              role: document.getElementById('u-role').value,
-              active: true,
-              salt: salt,
-              passHash: passHash,
-              createdAt: new Date().toISOString(),
-            };
-            await DB.tambahUser(newUser);
-            document.getElementById('user-form').reset();
-            document.getElementById('user-modal').classList.add('hidden');
-            renderUsers();
+            var errBox = document.getElementById('u-form-error');
+            if (errBox) errBox.classList.add('hidden');
+            try {
+              var salt = 's_' + Math.random().toString(36).slice(2, 8);
+              var passHash = await RBAC.hashPassword(document.getElementById('u-password').value, salt);
+              var newUser = {
+                id: DB.generateId('usr'),
+                name: document.getElementById('u-name').value.trim(),
+                username: document.getElementById('u-username').value.trim().toLowerCase().replace(/\s+/g, ''),
+                role: document.getElementById('u-role').value,
+                active: true,
+                salt: salt,
+                passHash: passHash,
+                createdAt: new Date().toISOString(),
+              };
+              await DB.simpanUser(newUser);
+              document.getElementById('user-form').reset();
+              document.getElementById('user-modal').classList.add('hidden');
+              renderUsers();
+            } catch (err) {
+              if (errBox) {
+                errBox.textContent = err && err.message ? err.message : 'Gagal membuat akun.';
+                errBox.classList.remove('hidden');
+              }
+            }
           });
         }
 
