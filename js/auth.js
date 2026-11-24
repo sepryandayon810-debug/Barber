@@ -129,6 +129,9 @@
 
   function logout() {
     localStorage.removeItem(SESSION_KEY);
+    if (global.BarberFirebase && typeof global.BarberFirebase.signOut === 'function') {
+      global.BarberFirebase.signOut().catch(function () {});
+    }
     global.location.href = './index.html';
   }
 
@@ -157,8 +160,60 @@
     return user;
   }
 
-  async function login(username, password) {
+  async function needsInitialSetup() {
+    if (global.BarberFirebase && global.BarberFirebase.isConfigured()) {
+      return false;
+    }
     var db = await global.BarberDB.loadState();
+    return !db.users || db.users.length === 0;
+  }
+
+  async function setupInitialOwner(name, username, password, role) {
+    var db = await global.BarberDB.loadState();
+    if (db.users && db.users.length > 0) {
+      throw new Error('Akun utama sudah aktif. Silakan masuk melalui form login.');
+    }
+    var cleanName = String(name || '').trim();
+    var cleanUser = String(username || '').trim().toLowerCase().replace(/\s+/g, '');
+    var safeRole = role === 'developer' ? 'developer' : 'owner';
+    if (!cleanName || cleanUser.length < 3) {
+      throw new Error('Nama lengkap dan username (minimal 3 huruf) wajib diisi.');
+    }
+    if (!password || String(password).length < 6) {
+      throw new Error('Password akun utama minimal 6 karakter demi keamanan.');
+    }
+    var salt = 's_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    var passHash = await hashPassword(password, salt);
+    var firstUser = {
+      id: global.BarberDB.generateId('usr'),
+      name: cleanName,
+      username: cleanUser,
+      role: safeRole,
+      active: true,
+      salt: salt,
+      passHash: passHash,
+      createdAt: new Date().toISOString(),
+    };
+    await global.BarberDB.simpanUser(firstUser);
+    setSession(firstUser);
+    return firstUser;
+  }
+
+  async function login(username, password) {
+    // Jalur 1: Firebase Authentication (saat js/firebase-config.js diaktifkan)
+    if (global.BarberFirebase && global.BarberFirebase.isConfigured()) {
+      var fbUser = await global.BarberFirebase.signIn(username, password);
+      if (fbUser) {
+        setSession(fbUser);
+        return fbUser;
+      }
+    }
+
+    // Jalur 2: Verifikasi akun lokal ter-hash (mode offline / sebelum Firebase aktif)
+    var db = await global.BarberDB.loadState();
+    if (!db.users || db.users.length === 0) {
+      throw new Error('Belum ada akun terdaftar. Selesaikan aktivasi akun Owner terlebih dahulu.');
+    }
     var uname = String(username || '').trim().toLowerCase();
     var user = (db.users || []).find(function (u) {
       return u.username === uname && u.active;
@@ -168,7 +223,7 @@
     }
     var computedHash = await hashPassword(password, user.salt);
     if (computedHash !== user.passHash) {
-      throw new Error('Password / PIN salah. Periksa kembali atau pilih akun uji.');
+      throw new Error('Password / PIN salah. Silakan periksa kembali.');
     }
     setSession(user);
     return user;
@@ -181,6 +236,8 @@
     hashPassword: hashPassword,
     getSession: getSession,
     setSession: setSession,
+    needsInitialSetup: needsInitialSetup,
+    setupInitialOwner: setupInitialOwner,
     login: login,
     logout: logout,
     getPermissions: getPermissions,
