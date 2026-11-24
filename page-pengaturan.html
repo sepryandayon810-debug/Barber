@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pengaturan, Printer &amp; Sinkronisasi — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/printer.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Pengaturan Printer, Sinkronisasi &amp; Hak Akses</h1>
+              <p class="page-subtitle">
+                Pairing printer thermal Bluetooth, uji sinkronisasi offline-online, struktur koleksi Firestore, dan akun 4 role.
+              </p>
+            </div>
+            <div class="segmented" id="settings-tabs">
+              <button type="button" data-tab="printer" class="active">Printer &amp; Struk</button>
+              <button type="button" data-tab="sync">Sync Offline &amp; Firestore</button>
+              <button type="button" data-tab="users" id="tab-btn-users" class="hidden">User &amp; Hak Akses</button>
+            </div>
+          </div>
+
+          <!-- TAB 1: PRINTER BLUETOOTH & IDENTITAS STRUK -->
+          <section id="tab-printer" class="grid-12">
+            <div class="panel panel-pad col-5" style="display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <h2 class="panel-title">Printer Thermal Bluetooth (ESC/POS)</h2>
+                <p class="panel-sub">Kompatibel printer BLE 58mm / 80mm (RPP02N, Eppos, Panda, VSC, dll.)</p>
+              </div>
+              <div class="panel panel-pad" style="background:#F8FAFC;font-size:12px;">
+                <div class="summary-row">
+                  <span>Status Bluetooth</span>
+                  <strong id="bt-status-text">Belum Terhubung</strong>
+                </div>
+                <div class="summary-row" style="margin-top:6px;">
+                  <span>Dukungan Browser</span>
+                  <span class="mono" id="bt-support-text">-</span>
+                </div>
+              </div>
+              <div id="bt-feedback" class="notice hidden"></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <button type="button" id="btn-bt-connect" class="btn btn-primary btn-sm">Hubungkan Printer Bluetooth</button>
+                <button type="button" id="btn-bt-test" class="btn btn-dark btn-sm hidden">Test Print</button>
+                <button type="button" id="btn-bt-disconnect" class="btn btn-outline btn-sm hidden">Putuskan</button>
+              </div>
+            </div>
+
+            <form id="shop-settings-form" class="panel panel-pad col-7" style="display:flex;flex-direction:column;gap:14px;">
+              <h2 class="panel-title">Identitas Aplikasi, Bagi Hasil &amp; Format Struk</h2>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="set-paper">Lebar Kertas Thermal</label>
+                  <select id="set-paper" class="select">
+                    <option value="58mm">58mm (32 karakter/baris)</option>
+                    <option value="80mm">80mm (42 karakter/baris)</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:flex-end;padding-bottom:8px;">
+                  <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+                    <input type="checkbox" id="set-autoprint" />
+                    Otomatis cetak Bluetooth setelah transaksi selesai
+                  </label>
+                </div>
+              </div>
+
+              <div id="owner-shop-fields" style="display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--border-subtle);padding-top:14px;">
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label" for="set-app-name">Nama Aplikasi / Brand (Sidebar &amp; Login)</label>
+                    <input type="text" id="set-app-name" class="input" placeholder="Contoh: Hifzi Barbershop" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="set-shop-name">Nama Barbershop di Struk</label>
+                    <input type="text" id="set-shop-name" class="input" placeholder="Contoh: HIFZI BARBER STUDIO" required />
+                  </div>
+                </div>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label" for="set-branch">Nama Cabang</label>
+                    <input type="text" id="set-branch" class="input" placeholder="Cabang Utama" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="set-phone">Telepon / WhatsApp</label>
+                    <input type="text" id="set-phone" class="input" />
+                  </div>
+                </div>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label class="form-label" for="set-address">Alamat Struk</label>
+                    <input type="text" id="set-address" class="input" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="set-footer">Catatan Bawah Struk</label>
+                    <input type="text" id="set-footer" class="input" />
+                  </div>
+                </div>
+
+                <!-- Pengaturan Persentase Bagi Hasil Dinamis -->
+                <div class="panel panel-pad" style="background:#F8FAFC;display:flex;flex-direction:column;gap:12px;">
+                  <div>
+                    <div class="fw-600 fs-xs">Pengaturan Bagi Hasil Jasa Default (Fleksibel)</div>
+                    <div class="fs-11 text-muted">Ubah kapan saja jika skema bagi hasil berubah — otomatis saling menyesuaikan total 100%.</div>
+                  </div>
+                  <div class="grid-2">
+                    <div class="form-group">
+                      <label class="form-label" for="set-cap-pct">Bagian Capster (%)</label>
+                      <input type="number" id="set-cap-pct" class="input mono fw-600" min="0" max="100" step="1" value="40" />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="set-shop-pct">Bagian Toko (%)</label>
+                      <input type="number" id="set-shop-pct" class="input mono fw-600" min="0" max="100" step="1" value="60" />
+                    </div>
+                  </div>
+                  <div class="summary-row fs-xs" style="border-top:1px dashed var(--border-color);padding-top:8px;">
+                    <span>Simulasi Tarif Rp 50.000</span>
+                    <span class="mono fw-600" id="set-split-sim">Capster Rp 20.000 · Toko Rp 30.000</span>
+                  </div>
+                  <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;">
+                    <input type="checkbox" id="set-apply-all-services" checked />
+                    Terapkan persentase baru ini ke seluruh layanan &amp; capster yang sudah ada
+                  </label>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;">
+                <span class="fs-xs text-emerald" id="settings-saved-msg"></span>
+                <button type="submit" class="btn btn-primary">Simpan Pengaturan</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- TAB 2: SINKRONISASI OFFLINE-ONLINE & PANDUAN FIRESTORE -->
+          <section id="tab-sync" class="grid-12 hidden">
+            <div class="panel panel-pad col-6" style="display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <h2 class="panel-title">Status Jaringan &amp; Antrean Offline (IndexedDB)</h2>
+                <p class="panel-sub">Kasir tetap bisa bertransaksi saat internet mati; antrean otomatis dikirim saat koneksi kembali online.</p>
+              </div>
+              <div class="grid-3 panel panel-pad" style="background:#F8FAFC;font-size:12px;">
+                <div><div class="text-muted">Status</div><div class="fw-700" id="sync-status-val" style="margin-top:4px;">Online</div></div>
+                <div><div class="text-muted">Antrean Sync</div><div class="mono fw-700 text-brass" id="sync-queue-count" style="margin-top:4px;">0 mutasi</div></div>
+                <div><div class="text-muted">Revisi Lokal</div><div class="mono fw-700" id="sync-rev-val" style="margin-top:4px;">#1</div></div>
+              </div>
+              <p class="fs-xs text-muted" id="sync-last-time"></p>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <button type="button" id="btn-sync-now" class="btn btn-primary btn-sm">Sinkronkan Sekarang</button>
+                <button type="button" id="btn-sim-offline" class="btn btn-outline btn-sm">Uji Mode Offline</button>
+                <button type="button" id="btn-export-json" class="btn btn-outline btn-sm hidden">Backup JSON</button>
+                <button type="button" id="btn-reset-demo" class="btn btn-danger-outline btn-sm hidden">Reset Data Demo</button>
+              </div>
+              <div id="queue-list-box"></div>
+            </div>
+
+            <div class="panel panel-pad col-6" style="display:flex;flex-direction:column;gap:12px;">
+              <div>
+                <h2 class="panel-title">Panduan Struktur Koleksi Firestore &amp; GitHub</h2>
+                <p class="panel-sub">Siap disambungkan ke proyek Firebase Firestore Anda melalui <code>BarberDB.setFirestoreAdapter(...)</code> di <code>js/database.js</code>.</p>
+              </div>
+              <div id="firestore-schema-list"></div>
+              <div class="notice warning">
+                Saat menghubungkan ke Firestore, aktifkan <strong>persistentLocalCache()</strong> agar cache lokal dan antrean sinkronisasi offline tetap berjalan mulus di browser.
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB 3: MANAJEMEN USER & MATRIKS 4 ROLE -->
+          <section id="tab-users" class="hidden" style="display:flex;flex-direction:column;gap:20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Daftar Akun Pengguna</h2>
+                  <p class="panel-sub" id="user-mgmt-sub"></p>
+                </div>
+                <button type="button" id="btn-add-user" class="btn btn-primary btn-sm">Tambah Akun</button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama Lengkap</th>
+                      <th>Username</th>
+                      <th>Role / Jabatan</th>
+                      <th>Status</th>
+                      <th class="text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><h2 class="panel-title">Matriks Pembatasan Hak Akses 4 Role</h2></div>
+              <div class="grid-4 panel-pad" id="role-matrix-grid"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal Tambah User -->
+    <div id="user-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title">Tambah Akun Pengguna</h3>
+          <button type="button" class="btn-icon" id="close-user-modal">✕</button>
+        </div>
+        <form id="user-form">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label" for="u-name">Nama Lengkap</label>
+              <input type="text" id="u-name" class="input" placeholder="Contoh: Siti Kasir Shift Sore" required />
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="u-username">Username</label>
+                <input type="text" id="u-username" class="input mono" placeholder="kasir2" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="u-role">Role</label>
+                <select id="u-role" class="select"></select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="u-password">Password / PIN Awal</label>
+              <input type="password" id="u-password" class="input" minlength="4" placeholder="Minimal 4 karakter" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-user-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Akun</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('pengaturan', 'Pengaturan');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var TP = window.ThermalPrinter;
+        var RBAC = window.AuthRBAC;
+        var isOwnerOrDev = ctx.user.role === 'developer' || ctx.user.role === 'owner';
+
+        if (ctx.perms.canManageUsers) document.getElementById('tab-btn-users').classList.remove('hidden');
+        if (!isOwnerOrDev) document.getElementById('owner-shop-fields').classList.add('hidden');
+        if (isOwnerOrDev) document.getElementById('btn-export-json').classList.remove('hidden');
+        if (ctx.perms.canManageSystem) document.getElementById('btn-reset-demo').classList.remove('hidden');
+
+        // Tabs
+        document.querySelectorAll('#settings-tabs button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            document.querySelectorAll('#settings-tabs button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            var t = b.getAttribute('data-tab');
+            document.getElementById('tab-printer').classList.toggle('hidden', t !== 'printer');
+            document.getElementById('tab-sync').classList.toggle('hidden', t !== 'sync');
+            document.getElementById('tab-users').classList.toggle('hidden', t !== 'users');
+          });
+        });
+
+        // Printer UI
+        function renderBtStatus() {
+          var st = TP.getStatus();
+          document.getElementById('bt-support-text').textContent = TP.isSupported() ? 'Tersedia' : 'Gunakan Chrome / Edge';
+          document.getElementById('bt-status-text').textContent = st && st.connected ? 'Terhubung (' + st.name + ')' : 'Belum Terhubung';
+          document.getElementById('btn-bt-connect').classList.toggle('hidden', Boolean(st && st.connected));
+          document.getElementById('btn-bt-test').classList.toggle('hidden', !Boolean(st && st.connected));
+          document.getElementById('btn-bt-disconnect').classList.toggle('hidden', !Boolean(st && st.connected));
+        }
+
+        function setBtFeedback(type, text) {
+          var el = document.getElementById('bt-feedback');
+          el.className = 'notice ' + type;
+          el.textContent = text;
+        }
+
+        document.getElementById('btn-bt-connect').addEventListener('click', async function () {
+          try {
+            var conn = await TP.connect();
+            renderBtStatus();
+            setBtFeedback('success', 'Berhasil terhubung ke printer Bluetooth: ' + conn.name);
+          } catch (err) {
+            setBtFeedback('error', err && err.message ? err.message : 'Gagal menghubungkan printer.');
+          }
+        });
+        document.getElementById('btn-bt-disconnect').addEventListener('click', function () {
+          TP.disconnect();
+          renderBtStatus();
+          setBtFeedback('success', 'Koneksi printer diputuskan.');
+        });
+        document.getElementById('btn-bt-test').addEventListener('click', async function () {
+          try {
+            var st = await DB.loadState();
+            await TP.printTestPage(st.settings);
+            setBtFeedback('success', 'Halaman test print berhasil dikirim ke printer thermal.');
+          } catch (err) {
+            setBtFeedback('error', err && err.message ? err.message : 'Test print gagal.');
+          }
+        });
+
+        // Shop Settings Form + Live Split Sync
+        function updateSplitSimulation() {
+          var capPct = Math.max(0, Math.min(100, Math.round(Number(document.getElementById('set-cap-pct').value) || 0)));
+          var sp = FE.calculateServiceLine({ price: 50000, capsterSharePct: capPct }, 1);
+          var simEl = document.getElementById('set-split-sim');
+          if (simEl) {
+            simEl.textContent =
+              'Capster ' + sp.capsterSharePct + '% (' + FE.formatRupiah(sp.capsterShareAmount) + ') · Toko ' + sp.shopSharePct + '% (' + FE.formatRupiah(sp.shopShareAmount) + ')';
+          }
+        }
+
+        document.getElementById('set-cap-pct').addEventListener('input', function () {
+          var cap = Math.max(0, Math.min(100, Math.round(Number(this.value) || 0)));
+          document.getElementById('set-shop-pct').value = 100 - cap;
+          updateSplitSimulation();
+        });
+
+        document.getElementById('set-shop-pct').addEventListener('input', function () {
+          var shop = Math.max(0, Math.min(100, Math.round(Number(this.value) || 0)));
+          document.getElementById('set-cap-pct').value = 100 - shop;
+          updateSplitSimulation();
+        });
+
+        async function populateSettings() {
+          var db = await DB.loadState();
+          var split = FE.getSplitConfig(db.settings);
+          document.getElementById('set-paper').value = db.settings.paperWidth || '58mm';
+          document.getElementById('set-autoprint').checked = Boolean(db.settings.autoPrintReceipt);
+          document.getElementById('set-app-name').value = db.settings.appName || 'BarberDesk';
+          document.getElementById('set-shop-name').value = db.settings.shopName || '';
+          document.getElementById('set-branch').value = db.settings.branchName || '';
+          document.getElementById('set-address').value = db.settings.address || '';
+          document.getElementById('set-phone').value = db.settings.phone || '';
+          document.getElementById('set-footer').value = db.settings.receiptFooter || '';
+          document.getElementById('set-cap-pct').value = split.capsterPct;
+          document.getElementById('set-shop-pct').value = split.shopPct;
+          updateSplitSimulation();
+        }
+
+        document.getElementById('shop-settings-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var partial = {
+            paperWidth: document.getElementById('set-paper').value,
+            autoPrintReceipt: document.getElementById('set-autoprint').checked,
+          };
+          var applyAll = false;
+          if (isOwnerOrDev) {
+            var nextAppName = document.getElementById('set-app-name').value.trim() || 'BarberDesk';
+            var nextShopName = document.getElementById('set-shop-name').value.trim() || nextAppName;
+            var nextCapPct = Math.max(0, Math.min(100, Math.round(Number(document.getElementById('set-cap-pct').value) || 0)));
+            partial.appName = nextAppName;
+            partial.shopName = nextShopName;
+            partial.branchName = document.getElementById('set-branch').value.trim();
+            partial.address = document.getElementById('set-address').value.trim();
+            partial.phone = document.getElementById('set-phone').value.trim();
+            partial.receiptFooter = document.getElementById('set-footer').value.trim();
+            partial.defaultCapsterPct = nextCapPct;
+            partial.defaultShopPct = 100 - nextCapPct;
+            applyAll = document.getElementById('set-apply-all-services').checked;
+          }
+          await DB.simpanPengaturan(partial, { applySplitToAllServices: applyAll });
+          var msg = document.getElementById('settings-saved-msg');
+          msg.textContent = applyAll
+            ? 'Pengaturan, nama brand & bagi hasil seluruh layanan berhasil diperbarui.'
+            : 'Pengaturan & nama brand berhasil tersimpan.';
+          setTimeout(function () { msg.textContent = ''; }, 3200);
+        });
+
+        // Sync Tab
+        async function renderSyncPanel() {
+          var db = await DB.loadState();
+          var queue = await DB.getQueue();
+          var online = DB.isOnlineNow();
+          var simOff = DB.isSimulatedOffline();
+          document.getElementById('sync-status-val').textContent = online ? 'Online' : 'Offline';
+          document.getElementById('sync-queue-count').textContent = queue.length + ' mutasi';
+          document.getElementById('sync-rev-val').textContent = '#' + (db.revision || 1);
+          var last = DB.getLastSyncedAt();
+          document.getElementById('sync-last-time').textContent = last ? 'Sinkronisasi terakhir: ' + FE.formatDateTime(last) : 'Belum ada riwayat sinkronisasi.';
+          document.getElementById('btn-sync-now').disabled = !online;
+          var simBtn = document.getElementById('btn-sim-offline');
+          simBtn.textContent = simOff ? 'Matikan Simulasi Offline (Kembali Online)' : 'Uji Mode Offline';
+
+          var qBox = document.getElementById('queue-list-box');
+          qBox.innerHTML = queue.length
+            ? '<p class="fs-xs fw-600" style="margin-bottom:8px;">Daftar Mutasi Menunggu Koneksi:</p>' +
+              queue.map(function (m) {
+                return '<div class="notice warning" style="display:flex;justify-content:space-between;margin-bottom:6px;"><span class="mono fw-600">' + m.action + ' (' + m.collection + ')</span><span>' + FE.formatDateTime(m.createdAt) + '</span></div>';
+              }).join('')
+            : '<p class="fs-xs text-muted">Tidak ada antrean offline. Seluruh perubahan sudah tersinkron.</p>';
+        }
+
+        document.getElementById('firestore-schema-list').innerHTML = DB.FIRESTORE_COLLECTIONS.map(function (c) {
+          return '<div style="padding:8px 0;border-bottom:1px solid var(--border-subtle);"><div class="mono fs-xs fw-600">' + c.path + '</div><div class="fs-11 text-muted">' + c.desc + '</div></div>';
+        }).join('');
+
+        document.getElementById('btn-sync-now').addEventListener('click', async function () {
+          await DB.syncNow();
+          renderSyncPanel();
+        });
+        document.getElementById('btn-sim-offline').addEventListener('click', function () {
+          DB.setSimulatedOffline(!DB.isSimulatedOffline());
+          renderSyncPanel();
+        });
+        document.getElementById('btn-export-json').addEventListener('click', async function () {
+          var db = await DB.loadState();
+          var slug = String(db.settings.appName || 'barberdesk').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'barberdesk';
+          var blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = slug + '-backup-rev' + db.revision + '.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+        document.getElementById('btn-reset-demo').addEventListener('click', async function () {
+          await DB.resetDemoData();
+          renderSyncPanel();
+          populateSettings();
+          if (ctx.perms.canManageUsers) renderUsers();
+        });
+
+        // Users & RBAC Tab
+        async function renderUsers() {
+          if (!ctx.perms.canManageUsers) return;
+          var db = await DB.loadState();
+          document.getElementById('user-mgmt-sub').textContent =
+            ctx.user.role === 'developer'
+              ? 'Developer dapat mengelola seluruh akun (Developer, Owner, Admin, Kasir).'
+              : 'Owner dapat menambah dan mengelola akun Admin serta Kasir.';
+
+          var tbody = document.getElementById('users-tbody');
+          tbody.innerHTML = db.users.map(function (u) {
+            var canManage = u.id !== ctx.user.id && ctx.perms.canManageRoleTarget(u.role);
+            return (
+              '<tr>' +
+                '<td class="fw-600">' + u.name + (u.id === ctx.user.id ? ' <span class="fs-xs text-muted">(Anda)</span>' : '') + '</td>' +
+                '<td class="mono fs-xs">' + u.username + '</td>' +
+                '<td class="fs-xs fw-600">' + RBAC.ROLE_LABELS[u.role] + '</td>' +
+                '<td class="fs-xs text-emerald">' + (u.active ? 'Aktif' : 'Nonaktif') + '</td>' +
+                '<td class="text-right">' +
+                  (canManage
+                    ? '<button type="button" class="btn btn-danger-outline btn-sm" data-del-user="' + u.id + '">Hapus</button>'
+                    : '<span class="fs-xs text-muted">Terkunci</span>') +
+                '</td>' +
+              '</tr>'
+            );
+          }).join('');
+
+          tbody.querySelectorAll('[data-del-user]').forEach(function (b) {
+            b.addEventListener('click', async function () {
+              var id = b.getAttribute('data-del-user');
+              await DB.hapusUser(id);
+              renderUsers();
+            });
+          });
+
+          document.getElementById('role-matrix-grid').innerHTML = ['developer', 'owner', 'admin', 'kasir'].map(function (r) {
+            return (
+              '<div class="panel panel-pad" style="background:#F8FAFC;">' +
+                '<div class="fw-700" style="margin-bottom:6px;">' + RBAC.ROLE_LABELS[r] + '</div>' +
+                '<p class="fs-xs text-secondary">' + RBAC.ROLE_DESCRIPTIONS[r] + '</p>' +
+              '</div>'
+            );
+          }).join('');
+        }
+
+        if (ctx.perms.canManageUsers) {
+          var allowedRoles = ctx.user.role === 'developer' ? ['developer', 'owner', 'admin', 'kasir'] : ['admin', 'kasir'];
+          document.getElementById('u-role').innerHTML = allowedRoles.map(function (r) {
+            return '<option value="' + r + '">' + RBAC.ROLE_LABELS[r] + '</option>';
+          }).join('');
+
+          document.getElementById('btn-add-user').addEventListener('click', function () { document.getElementById('user-modal').classList.remove('hidden'); });
+          document.getElementById('close-user-modal').addEventListener('click', function () { document.getElementById('user-modal').classList.add('hidden'); });
+          document.getElementById('cancel-user-modal').addEventListener('click', function () { document.getElementById('user-modal').classList.add('hidden'); });
+
+          document.getElementById('user-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            var salt = 's_' + Math.random().toString(36).slice(2, 8);
+            var passHash = await RBAC.hashPassword(document.getElementById('u-password').value, salt);
+            var newUser = {
+              id: DB.generateId('usr'),
+              name: document.getElementById('u-name').value.trim(),
+              username: document.getElementById('u-username').value.trim().toLowerCase(),
+              role: document.getElementById('u-role').value,
+              active: true,
+              salt: salt,
+              passHash: passHash,
+              createdAt: new Date().toISOString(),
+            };
+            await DB.tambahUser(newUser);
+            document.getElementById('user-form').reset();
+            document.getElementById('user-modal').classList.add('hidden');
+            renderUsers();
+          });
+        }
+
+        window.addEventListener('barberdesk:sync-change', renderSyncPanel);
+        renderBtStatus();
+        populateSettings();
+        renderSyncPanel();
+        renderUsers();
+      })();
+    </script>
+  </body>
+</html>
