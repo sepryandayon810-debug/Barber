@@ -21,12 +21,13 @@
   var ENABLE_FIREBASE = false; // Ubah ke true setelah FIREBASE_CONFIG diisi
 
   var FIREBASE_CONFIG = {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    storageBucket: '',
-    messagingSenderId: '',
-    appId: '',
+  const firebaseConfig = {
+  apiKey: "AIzaSyB7e-kIDuXoMoBKBxExEdpmIA90fkPYvPc",
+  authDomain: "hifzipay.firebaseapp.com",
+  projectId: "hifzipay",
+  storageBucket: "hifzipay.firebasestorage.app",
+  messagingSenderId: "133138253573",
+  appId: "1:133138253573:web:1ad9938e13f26b74c9d96c"
   };
 
   // Domain email virtual jika user login pakai username saja (misal: owner -> owner@barber.local)
