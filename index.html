@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Masuk — BarberDesk POS Barbershop</title>
+    <meta
+      name="description"
+      content="Aplikasi POS Barbershop berbasis HTML (multi-page page-*.html) dengan bagi hasil capster 40/60, penjualan barang, penggajian otomatis, scan barcode, cetak struk thermal Bluetooth, dan sinkronisasi online-offline."
+    />
+    <meta property="og:title" content="BarberDesk — Kasir & Manajemen Barbershop" />
+    <meta
+      property="og:description"
+      content="Sistem kasir barbershop responsif HP & Desktop dengan bagi hasil 40% capster / 60% toko, stok barang, penggajian, scan barcode, printer thermal Bluetooth, dan mode offline-online."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/sidebar.js"></script>
+    <style>
+      .mobile-login-brand {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .pass-wrap {
+        position: relative;
+      }
+      .pass-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 4px 6px;
+      }
+      .pass-toggle:hover {
+        color: var(--text-primary);
+      }
+      @media (max-width: 900px) {
+        .mobile-login-brand { display: flex; }
+        .login-panel {
+          min-height: 100vh;
+          align-items: flex-start;
+          padding: 24px 16px 36px;
+        }
+        .login-box {
+          background: #FFFFFF;
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          padding: 22px 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-shell">
+      <!-- Panel Editorial Kiri (Desktop) -->
+      <section class="login-hero">
+        <img
+          src="./assets/images/barber_studio_interior.jpg"
+          alt="Interior Studio Barbershop BarberDesk"
+          referrerpolicy="no-referrer"
+          onerror="this.style.display='none'"
+        />
+        <div class="login-hero-scrim"></div>
+
+        <div class="login-hero-content" style="display:flex;align-items:center;gap:12px;">
+          <div class="brand-mark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <line x1="20" y1="4" x2="8.12" y2="15.88" />
+              <line x1="14.47" y1="14.48" x2="20" y2="20" />
+              <line x1="8.12" y1="8.12" x2="12" y2="12" />
+            </svg>
+          </div>
+          <span class="brand-name" id="login-brand-hero" style="font-size:20px;">BarberDesk</span>
+        </div>
+      </section>
+
+      <!-- Panel Login Kanan (Desktop & Mobile First) -->
+      <main class="login-panel">
+        <div class="login-box">
+          <div class="mobile-login-brand">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="brand-mark">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="6" cy="6" r="3" />
+                  <circle cx="6" cy="18" r="3" />
+                  <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                  <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                  <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                </svg>
+              </div>
+              <span class="font-display fw-700" id="login-brand-mobile" style="font-size:18px;">BarberDesk</span>
+            </div>
+            <span class="fs-11 text-muted mono" id="login-net-status">Online</span>
+          </div>
+
+          <div>
+            <h2 class="page-title">Masuk ke Sistem Kasir</h2>
+            <p class="page-subtitle">
+              Login dengan username &amp; password/PIN sesuai jabatan Anda. Mendukung login saat offline.
+            </p>
+          </div>
+
+          <form id="login-form" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="form-group">
+              <label class="form-label" for="login-username">Username</label>
+              <input
+                id="login-username"
+                type="text"
+                class="input"
+                autocomplete="username"
+                placeholder="Masukkan username"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="login-password">Password / PIN</label>
+              <div class="pass-wrap">
+                <input
+                  id="login-password"
+                  type="password"
+                  class="input"
+                  style="padding-right:70px;"
+                  autocomplete="current-password"
+                  placeholder="Masukkan password atau PIN"
+                  required
+                />
+                <button type="button" id="toggle-pass-btn" class="pass-toggle">Lihat</button>
+              </div>
+            </div>
+
+            <div id="login-error" class="notice error hidden"></div>
+
+            <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width:100%;padding:12px 16px;">
+              Masuk ke Aplikasi
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var existing = window.AuthRBAC.getSession();
+        if (existing) {
+          window.location.href = window.AuthRBAC.getDefaultPageUrl(existing.role);
+          return;
+        }
+
+        function updateNetLabel() {
+          var el = document.getElementById('login-net-status');
+          if (el) el.textContent = navigator.onLine ? 'Online · Siap Sync' : 'Offline · Mode Lokal';
+        }
+        updateNetLabel();
+        window.addEventListener('online', updateNetLabel);
+        window.addEventListener('offline', updateNetLabel);
+
+        window.BarberDB.loadState().then(function (db) {
+          var appName = (db.settings && db.settings.appName) || 'BarberDesk';
+          document.title = 'Masuk — ' + appName;
+          var heroBrand = document.getElementById('login-brand-hero');
+          var mobBrand = document.getElementById('login-brand-mobile');
+          if (heroBrand) heroBrand.textContent = appName;
+          if (mobBrand) mobBrand.textContent = appName;
+        }).catch(function () {});
+
+        var usernameEl = document.getElementById('login-username');
+        var passwordEl = document.getElementById('login-password');
+        var togglePassBtn = document.getElementById('toggle-pass-btn');
+        var errEl = document.getElementById('login-error');
+
+        togglePassBtn.addEventListener('click', function () {
+          var isHidden = passwordEl.type === 'password';
+          passwordEl.type = isHidden ? 'text' : 'password';
+          togglePassBtn.textContent = isHidden ? 'Tutup' : 'Lihat';
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          errEl.classList.add('hidden');
+          var submitBtn = document.getElementById('btn-login-submit');
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Memverifikasi...';
+
+          try {
+            var user = await window.AuthRBAC.login(usernameEl.value, passwordEl.value);
+            window.location.href = window.AuthRBAC.getDefaultPageUrl(user.role);
+          } catch (err) {
+            errEl.textContent = err && err.message ? err.message : 'Gagal masuk ke sistem.';
+            errEl.classList.remove('hidden');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Masuk ke Aplikasi';
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
