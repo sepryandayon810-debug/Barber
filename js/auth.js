@@ -24,7 +24,7 @@
 
   var PERMISSIONS = {
     developer: {
-      pages: ['dashboard', 'kasir', 'layanan', 'produk', 'gaji', 'transaksi', 'laporan', 'pengaturan'],
+      pages: ['dashboard', 'kasir', 'layanan', 'produk', 'gaji', 'transaksi', 'laporan', 'akun', 'pengaturan'],
       canEditServices: true,
       canEditProducts: true,
       canViewCostAndProfit: true,
@@ -38,7 +38,7 @@
       canManageRoleTarget: function () { return true; },
     },
     owner: {
-      pages: ['dashboard', 'kasir', 'layanan', 'produk', 'gaji', 'transaksi', 'laporan', 'pengaturan'],
+      pages: ['dashboard', 'kasir', 'layanan', 'produk', 'gaji', 'transaksi', 'laporan', 'akun', 'pengaturan'],
       canEditServices: true,
       canEditProducts: true,
       canViewCostAndProfit: true,
