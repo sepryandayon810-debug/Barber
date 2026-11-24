@@ -24,13 +24,13 @@
     styleEl.id = 'barberdesk-core-style';
     styleEl.textContent = `
 :root {
-  --bg-canvas: #F8F9FA;
+  --bg-canvas: #F3F5F8;
   --bg-surface: #FFFFFF;
   --bg-subtle: #F1F5F9;
   --bg-sidebar: #111315;
-  --bg-sidebar-hover: rgba(255, 255, 255, 0.07);
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.08);
 
-  --text-primary: #111315;
+  --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-muted: #64748B;
   --text-on-dark: #F8FAFC;
@@ -47,15 +47,19 @@
   --accent-red: #DC2626;
   --accent-emerald: #16A34A;
 
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+
   --font-display: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --sidebar-width: 256px;
-  --topbar-height: 64px;
+  --topbar-height: 62px;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -205,13 +209,15 @@ button, input, select, textarea { font-family: inherit; }
 
 .topbar {
   height: var(--topbar-height);
-  background: var(--bg-surface);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -221,12 +227,13 @@ button, input, select, textarea { font-family: inherit; }
 
 .btn-menu-mobile {
   display: none;
-  background: transparent;
+  background: #FFFFFF;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 7px 9px;
   cursor: pointer;
   color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; min-width: 0; }
@@ -240,12 +247,30 @@ button, input, select, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 
-.topbar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(20, 83, 45, 0.25);
+  background: rgba(20, 83, 45, 0.08);
+  color: var(--accent-green);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.install-btn:hover { background: rgba(20, 83, 45, 0.14); border-color: var(--accent-green); }
 
 .sync-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 7px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
@@ -255,6 +280,7 @@ button, input, select, textarea { font-family: inherit; }
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  box-shadow: var(--shadow-xs);
   transition: border-color 150ms ease, background-color 150ms ease;
 }
 
@@ -327,25 +353,35 @@ button, input, select, textarea { font-family: inherit; }
 .btn-icon:hover { background: var(--bg-subtle); color: var(--text-primary); }
 .btn-icon.danger:hover { background: #FEF2F2; color: var(--accent-red); }
 
+.btn:active:not(:disabled) { transform: scale(0.985); }
+
 .segmented {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   padding: 4px;
   background: #FFFFFF;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
   gap: 2px;
 }
+
+.segmented::-webkit-scrollbar { display: none; }
 
 .segmented button {
   padding: 6px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease;
 }
@@ -396,7 +432,12 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* CARDS, GRIDS & TABLES */
-.panel { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); }
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
 .panel-pad { padding: 20px; }
 
 .panel-header {
@@ -427,23 +468,29 @@ button, input, select, textarea { font-family: inherit; }
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 20px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 160ms ease, transform 160ms ease;
 }
 
-.kpi-label { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; }
+.kpi-card:hover { border-color: #CBD5E1; }
+
+.kpi-label { font-size: 12px; font-weight: 500; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 
 .kpi-value {
   margin-top: 10px;
   font-family: var(--font-mono);
-  font-size: 24px;
-  font-weight: 600;
+  font-size: clamp(19px, 2vw, 24px);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: break-word;
 }
 
-.kpi-meta { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.kpi-meta { margin-top: 8px; font-size: 12px; color: var(--text-muted); line-height: 1.4; }
 
-.table-wrap { width: 100%; overflow-x: auto; }
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
 
 table.data-table th {
@@ -702,7 +749,7 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
 .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 39; }
 .mobile-bottom-nav { display: none; }
 
-/* RESPONSIVE BREAKPOINTS */
+/* RESPONSIVE BREAKPOINTS (DESKTOP → TABLET → MOBILE) */
 @media (max-width: 1120px) {
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pos-layout { grid-template-columns: 1fr; }
@@ -713,21 +760,35 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
 @media (max-width: 900px) {
   .login-shell { grid-template-columns: 1fr; }
   .login-hero { display: none; }
-  .sidebar { position: fixed; left: -280px; top: 0; transition: left 200ms ease; }
-  .sidebar.open { left: 0; }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+  }
+  .sidebar.open { transform: translateX(0); }
   .sidebar-backdrop.open { display: block; }
   .btn-menu-mobile { display: inline-flex; }
-  .topbar { padding: 0 16px; height: 54px; }
-  .app-main { padding-bottom: 68px; }
-  .page-content { padding: 18px 16px; }
+  .topbar { padding: 0 14px; height: 56px; }
+  .app-main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  .page-content { padding: 16px 14px; gap: 16px; }
+  .page-title { font-size: 20px; }
   .inv-banner { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
   .btn, .input, .select, .capster-btn, .pay-method-btn { min-height: 44px; }
   .btn-sm { min-height: 36px; }
-  .page-header { flex-direction: column; align-items: stretch; }
-  .header-actions { justify-content: flex-start; }
+  .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .header-actions { justify-content: flex-start; width: 100%; }
+  .date-range-box { flex-wrap: wrap; width: 100%; }
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .catalog-card { padding: 12px; }
+  .catalog-card { padding: 13px; gap: 10px; }
+  .panel-pad { padding: 16px; }
+  .panel-header { padding: 14px 16px; }
+  table.data-table th, table.data-table td { padding: 10px 12px; }
+  .bar-chart { height: 190px; gap: 6px; }
+  .bar-pair { height: 140px; }
 
   .mobile-bottom-nav {
     display: flex;
@@ -735,16 +796,20 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
     left: 0;
     right: 0;
     bottom: 0;
-    height: 60px;
-    background: #FFFFFF;
+    min-height: 62px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
     z-index: 38;
-    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px calc(6px + env(safe-area-inset-bottom, 0px));
     align-items: center;
     justify-content: space-around;
   }
 
   .mobile-bottom-item {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -752,6 +817,7 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
     justify-content: center;
     gap: 3px;
     height: 100%;
+    padding: 6px 2px;
     border: none;
     background: transparent;
     color: #64748B;
@@ -759,19 +825,44 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
+    transition: color 150ms ease;
   }
 
-  .mobile-bottom-item svg { width: 19px; height: 19px; }
+  .mobile-bottom-item svg { width: 20px; height: 20px; }
   .mobile-bottom-item.active { color: var(--accent-green); font-weight: 700; }
+  .mobile-bottom-item.active::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    width: 28px;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: var(--accent-green);
+  }
 }
 
-@media (max-width: 600px) {
-  .grid-4, .grid-2, .role-demo-grid { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .grid-2, .role-demo-grid { grid-template-columns: 1fr; }
+  .kpi-card { padding: 14px; }
+  .kpi-label { font-size: 11px; }
+  .kpi-value { font-size: clamp(16px, 4.4vw, 20px); margin-top: 6px; }
+  .kpi-meta { font-size: 11px; margin-top: 5px; }
   .breadcrumb-root, .breadcrumb-sep { display: none; }
+  .sync-btn { padding: 6px 9px; font-size: 11px; }
+  .install-btn { padding: 6px 9px; font-size: 11px; }
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal-card {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
-@media (max-width: 420px) {
-  .catalog-grid { grid-template-columns: 1fr; }
+@media (max-width: 360px) {
+  .grid-4, .catalog-grid { grid-template-columns: 1fr; }
 }
 
 /* PRINT THERMAL */
@@ -969,6 +1060,10 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
             '</div>' +
           '</div>' +
           '<div class="topbar-right">' +
+            '<button type="button" class="install-btn hidden" id="topbar-install-btn" title="Pasang aplikasi ke layar utama">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+              '<span id="topbar-install-label">Install App</span>' +
+            '</button>' +
             '<button type="button" class="sync-btn" id="topbar-sync-btn" title="Status jaringan & antrean sinkronisasi offline">' +
               '<span id="topbar-sync-label">Memeriksa...</span>' +
             '</button>' +
@@ -1001,6 +1096,8 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
           }
         });
       }
+
+      bindInstallButton();
     }
 
     // Mobile Bottom Navigation Bar (HP <= 900px)
@@ -1077,9 +1174,123 @@ table.data-table tbody tr.row-void { background: rgba(254, 226, 226, 0.35); opac
     };
   }
 
+  /* ==========================================================================
+     4. SERVICE WORKER (sw.js) & IN-APP PWA INSTALL PROMPT (ANDROID + iOS)
+     ========================================================================== */
+  var deferredInstallPrompt = null;
+
+  function isStandaloneMode() {
+    return (
+      (global.matchMedia && global.matchMedia('(display-mode: standalone)').matches) ||
+      global.navigator.standalone === true
+    );
+  }
+
+  function isIosBrowser() {
+    var ua = String((global.navigator && global.navigator.userAgent) || '').toLowerCase();
+    return /iphone|ipad|ipod/.test(ua) && !global.MSStream;
+  }
+
+  function showIosInstallModal() {
+    var existing = document.getElementById('ios-install-modal');
+    if (existing) {
+      existing.classList.remove('hidden');
+      return;
+    }
+    var modal = document.createElement('div');
+    modal.id = 'ios-install-modal';
+    modal.className = 'modal-backdrop';
+    modal.innerHTML =
+      '<div class="modal-card" style="max-width:420px;">' +
+        '<div class="modal-header">' +
+          '<h3 class="panel-title">Pasang Aplikasi di iPhone / iPad</h3>' +
+          '<button type="button" class="btn-icon" id="close-ios-install">✕</button>' +
+        '</div>' +
+        '<div class="modal-body" style="font-size:13px;color:var(--text-secondary);">' +
+          '<p>Agar aplikasi bisa dibuka layar penuh &amp; tetap jalan saat offline:</p>' +
+          '<ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;">' +
+            '<li>Ketuk tombol <strong>Bagikan (Share)</strong> di bar bawah Safari.</li>' +
+            '<li>Gulir ke bawah lalu pilih <strong>Tambah ke Layar Utama (Add to Home Screen)</strong>.</li>' +
+            '<li>Ketuk <strong>Tambah (Add)</strong> di pojok kanan atas.</li>' +
+          '</ol>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="ok-ios-install">Mengerti</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    var closeFn = function () { modal.classList.add('hidden'); };
+    modal.querySelector('#close-ios-install').addEventListener('click', closeFn);
+    modal.querySelector('#ok-ios-install').addEventListener('click', closeFn);
+    modal.addEventListener('click', function (ev) { if (ev.target === modal) closeFn(); });
+  }
+
+  function updateInstallButtonUI() {
+    var btn = document.getElementById('topbar-install-btn');
+    var label = document.getElementById('topbar-install-label');
+    if (!btn) return;
+    if (isStandaloneMode()) {
+      btn.classList.add('hidden');
+      return;
+    }
+    if (deferredInstallPrompt) {
+      btn.classList.remove('hidden');
+      if (label) label.textContent = 'Install App';
+    } else if (isIosBrowser()) {
+      btn.classList.remove('hidden');
+      if (label) label.textContent = 'Install iOS';
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  function bindInstallButton() {
+    var btn = document.getElementById('topbar-install-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async function () {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        try {
+          await deferredInstallPrompt.userChoice;
+        } catch (e) {}
+        deferredInstallPrompt = null;
+        updateInstallButtonUI();
+      } else if (isIosBrowser()) {
+        showIosInstallModal();
+      }
+    });
+    updateInstallButtonUI();
+  }
+
+  global.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    updateInstallButtonUI();
+  });
+
+  global.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+    updateInstallButtonUI();
+  });
+
+  // Daftarkan Service Worker ./sw.js (jalan otomatis di index.html & semua page-*.html)
+  if ('serviceWorker' in global.navigator) {
+    global.addEventListener('load', function () {
+      global.navigator.serviceWorker
+        .register('./sw.js', { scope: './' })
+        .then(function (reg) {
+          if (reg && reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        })
+        .catch(function () {});
+    });
+  }
+
   global.BarberLayout = {
     init: init,
     applyBranding: applyBranding,
     MENU_ITEMS: MENU_ITEMS,
+    isStandaloneMode: isStandaloneMode,
   };
 })(window);
