@@ -495,10 +495,48 @@
     return updated;
   }
 
+  async function simpanUser(userData) {
+    var cleanUsername = String(userData.username || '').trim().toLowerCase();
+    if (!cleanUsername) {
+      throw new Error('Username wajib diisi.');
+    }
+    var cur = await loadState();
+    var dup = (cur.users || []).find(function (u) {
+      return u.username === cleanUsername && u.id !== userData.id;
+    });
+    if (dup) {
+      throw new Error('Username "' + cleanUsername + '" sudah digunakan akun lain.');
+    }
+    var payload = Object.assign({}, userData, { username: cleanUsername });
+    return mutate('UPSERT_USER', 'users', payload.id, function (db) {
+      var idx = db.users.findIndex(function (x) { return x.id === payload.id; });
+      if (idx >= 0) {
+        db.users[idx] = Object.assign({}, db.users[idx], payload);
+      } else {
+        db.users.push(payload);
+      }
+    }, {
+      id: payload.id,
+      name: payload.name,
+      username: payload.username,
+      role: payload.role,
+      active: Boolean(payload.active),
+    });
+  }
+
   async function tambahUser(newUser) {
-    return mutate('UPSERT_USER', 'users', newUser.id, function (db) {
-      db.users.push(newUser);
-    }, { id: newUser.id, name: newUser.name, username: newUser.username, role: newUser.role, active: true });
+    return simpanUser(newUser);
+  }
+
+  async function toggleUserActive(id) {
+    var cur = await loadState();
+    var target = (cur.users || []).find(function (u) { return u.id === id; });
+    if (!target) return cur;
+    var nextActive = !target.active;
+    return mutate('UPSERT_USER', 'users', id, function (db) {
+      var u = db.users.find(function (x) { return x.id === id; });
+      if (u) u.active = nextActive;
+    }, { id: id, active: nextActive });
   }
 
   async function hapusUser(id) {
@@ -562,7 +600,9 @@
     simpanPengeluaran: simpanPengeluaran,
     hapusPengeluaran: hapusPengeluaran,
     simpanPengaturan: simpanPengaturan,
+    simpanUser: simpanUser,
     tambahUser: tambahUser,
+    toggleUserActive: toggleUserActive,
     hapusUser: hapusUser,
     setFirestoreAdapter: function (fn) { firestoreAdapter = fn; },
     FIRESTORE_COLLECTIONS: FIRESTORE_COLLECTIONS,
