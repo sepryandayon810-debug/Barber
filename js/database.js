@@ -66,7 +66,6 @@
 
   async function buildSeedState() {
     var now = new Date().toISOString();
-    var h = global.AuthRBAC.hashPassword;
     var FE = global.FinanceEngine;
 
     var services = [
@@ -180,12 +179,10 @@
       { id: 'exp_3', date: FE.daysAgoYmd(1), category: 'Operasional', description: 'Laundry handuk hangat & cape potong (12 kg)', amount: 96000, createdBy: 'Budi Admin', createdAt: isoDaysAgo(1, 10, 15) },
     ];
 
-    var users = [
-      { id: 'usr_dev', name: 'Sepryan Developer', username: 'developer', role: 'developer', active: true, salt: 's_dev', passHash: await h('dev123', 's_dev'), createdAt: now },
-      { id: 'usr_owner', name: 'Hendra Owner', username: 'owner', role: 'owner', active: true, salt: 's_own', passHash: await h('owner123', 's_own'), createdAt: now },
-      { id: 'usr_admin', name: 'Budi Admin', username: 'admin', role: 'admin', active: true, salt: 's_adm', passHash: await h('admin123', 's_adm'), createdAt: now },
-      { id: 'usr_kasir', name: 'Rina Kasir', username: 'kasir', role: 'kasir', active: true, salt: 's_ksr', passHash: await h('kasir123', 's_ksr'), createdAt: now },
-    ];
+    // Tidak ada password bawaan di kode publik agar aman di GitHub Pages.
+    // Akun pertama dibuat langsung oleh Owner/Developer lewat layar aktivasi pertama kali
+    // atau terhubung ke Firebase Authentication melalui js/firebase-config.js.
+    var users = [];
 
     return {
       revision: 1,
@@ -334,8 +331,8 @@
 
     if (typeof firestoreAdapter === 'function') {
       for (var i = 0; i < queue.length; i++) {
-  await firestoreAdapter(queue[i]);
-}
+        await firestoreAdapter(queue[i]);
+      }
     }
 
     var state = await loadState();
@@ -350,6 +347,14 @@
     return { synced: queue.length, online: true };
   }
 
+  function requestBackgroundSync() {
+    if ('serviceWorker' in navigator && 'SyncManager' in global) {
+      navigator.serviceWorker.ready
+        .then(function (reg) { return reg.sync.register('barberdesk-sync-queue'); })
+        .catch(function () {});
+    }
+  }
+
   async function mutate(action, collection, docId, mutatorFn, payloadForQueue) {
     var state = await loadState();
     mutatorFn(state);
@@ -359,8 +364,11 @@
     await enqueueMutation(action, collection, docId, payloadForQueue || {});
 
     if (isOnlineNow()) {
-      await syncNow();
+      await syncNow().catch(function () {
+        requestBackgroundSync();
+      });
     } else {
+      requestBackgroundSync();
       global.dispatchEvent(new CustomEvent('barberdesk:sync-change'));
     }
     return state;
@@ -564,6 +572,13 @@
   global.addEventListener('offline', function () {
     global.dispatchEvent(new CustomEvent('barberdesk:sync-change'));
   });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      if (ev.data && ev.data.type === 'BARBERDESK_TRIGGER_SYNC' && isOnlineNow()) {
+        syncNow().catch(function () {});
+      }
+    });
+  }
 
   var FIRESTORE_COLLECTIONS = [
     { path: 'settings/shop', desc: 'Identitas barbershop, lebar struk 58mm/80mm, default bagi hasil 40/60.' },
