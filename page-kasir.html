@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kasir POS — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/html5-qrcode.min.js"></script>
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/printer.js"></script>
+    <script src="./js/scanner.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="pos-layout">
+            <!-- KIRI: Capster + Katalog Layanan & Produk -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="panel capster-strip">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+                  <span class="fs-xs fw-600 text-secondary">Capster Bertugas:</span>
+                  <div class="capster-btn-list" id="capster-picker"></div>
+                </div>
+                <button type="button" class="btn btn-outline btn-sm" id="btn-open-scanner">
+                  Scan Barcode
+                </button>
+              </div>
+
+              <div id="pos-toast" class="notice hidden"></div>
+
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;">
+                <div class="segmented" id="catalog-tabs">
+                  <button type="button" data-tab="services" class="active">Layanan Potong</button>
+                  <button type="button" data-tab="products">Produk Retail</button>
+                </div>
+                <input
+                  type="text"
+                  id="pos-search"
+                  class="input input-sm"
+                  style="max-width:280px;"
+                  placeholder="Cari layanan, produk, atau tembak barcode..."
+                />
+              </div>
+
+              <div class="catalog-grid" id="catalog-grid"></div>
+            </div>
+
+            <!-- KANAN: Keranjang & Pembayaran -->
+            <section class="panel cart-panel">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Keranjang Transaksi</h2>
+                  <p class="panel-sub" id="cart-meta">0 item</p>
+                </div>
+                <button type="button" class="fs-xs fw-600 text-red hidden" id="btn-clear-cart" style="background:none;border:none;cursor:pointer;">
+                  Kosongkan
+                </button>
+              </div>
+
+              <div style="padding:12px 20px;border-bottom:1px solid var(--border-subtle);">
+                <input type="text" id="cart-customer" class="input input-sm" placeholder="Nama pelanggan (opsional, default Walk-in)" />
+              </div>
+
+              <div class="cart-list" id="cart-list"></div>
+
+              <div class="cart-footer">
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span class="mono" id="sum-subtotal">Rp 0</span>
+                  </div>
+                  <div class="summary-row">
+                    <span>Diskon Toko (Rp)</span>
+                    <input
+                      type="number"
+                      id="cart-discount"
+                      class="input input-sm mono text-right"
+                      style="width:120px;"
+                      min="0"
+                      value="0"
+                    />
+                  </div>
+                  <div class="summary-row fs-11 hidden" id="sum-split-row" style="border-top:1px dashed var(--border-color);padding-top:8px;">
+                    <span>Bagi Hasil Otomatis</span>
+                    <span class="mono" id="sum-split-val">-</span>
+                  </div>
+                  <div class="summary-row summary-total">
+                    <span>Total Bayar</span>
+                    <span class="mono" style="font-size:20px;" id="sum-total">Rp 0</span>
+                  </div>
+                </div>
+
+                <div class="pay-methods" id="pay-methods">
+                  <button type="button" class="pay-method-btn active" data-method="tunai">Tunai</button>
+                  <button type="button" class="pay-method-btn" data-method="qris">QRIS</button>
+                  <button type="button" class="pay-method-btn" data-method="transfer">Transfer</button>
+                </div>
+
+                <div id="cash-box" style="display:flex;flex-direction:column;gap:8px;">
+                  <div class="summary-row">
+                    <span class="fw-600">Uang Diterima</span>
+                    <input
+                      type="number"
+                      id="cart-paid"
+                      class="input input-sm mono text-right fw-700"
+                      style="width:140px;"
+                      min="0"
+                      value="0"
+                    />
+                  </div>
+                  <div class="quick-cash">
+                    <button type="button" data-cash="exact">Uang Pas</button>
+                    <button type="button" data-cash="50000">50rb</button>
+                    <button type="button" data-cash="100000">100rb</button>
+                    <button type="button" data-cash="150000">150rb</button>
+                  </div>
+                  <div class="summary-row">
+                    <span>Kembalian</span>
+                    <span class="mono fw-700 text-green" id="sum-change">Rp 0</span>
+                  </div>
+                </div>
+
+                <button type="button" id="btn-checkout" class="btn btn-primary" style="width:100%;padding:12px;" disabled>
+                  Selesaikan &amp; Cetak Struk
+                </button>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('kasir', 'Kasir POS');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var state = await DB.loadState();
+
+        var activeTab = 'services';
+        var selectedCapsterId = (state.capsters.find(function (c) { return c.active; }) || {}).id || '';
+        var cart = [];
+        var paymentMethod = 'tunai';
+
+        var toastTimer = null;
+        function showToast(type, text) {
+          var el = document.getElementById('pos-toast');
+          el.className = 'notice ' + type;
+          el.textContent = text;
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(function () { el.className = 'notice hidden'; }, 3400);
+        }
+
+        function getSelectedCapster() {
+          return state.capsters.find(function (c) { return c.id === selectedCapsterId && c.active; }) || state.capsters[0] || null;
+        }
+
+        function renderCapsters() {
+          var list = state.capsters.filter(function (c) { return c.active; });
+          var box = document.getElementById('capster-picker');
+          box.innerHTML = list.map(function (c) {
+            return '<button type="button" class="capster-btn ' + (c.id === selectedCapsterId ? 'active' : '') + '" data-cap="' + c.id + '">' + c.name + '</button>';
+          }).join('');
+          box.querySelectorAll('.capster-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              selectedCapsterId = btn.getAttribute('data-cap');
+              renderCapsters();
+            });
+          });
+        }
+
+        function addService(srv) {
+          var cap = getSelectedCapster();
+          if (!cap) {
+            showToast('error', 'Pilih capster yang bertugas terlebih dahulu.');
+            return;
+          }
+          var existing = cart.find(function (i) {
+            return i.itemType === 'service' && i.refId === srv.id && i.capsterId === cap.id;
+          });
+          if (existing) {
+            existing.qty += 1;
+            var calc = FE.calculateServiceLine(srv, existing.qty);
+            existing.subtotal = calc.subtotal;
+            existing.capsterShareAmount = calc.capsterShareAmount;
+            existing.shopShareAmount = calc.shopShareAmount;
+          } else {
+            var c1 = FE.calculateServiceLine(srv, 1);
+            cart.push({
+              id: DB.generateId('ln'),
+              itemType: 'service',
+              refId: srv.id,
+              name: srv.name,
+              qty: 1,
+              unitPrice: c1.unitPrice,
+              costPrice: 0,
+              subtotal: c1.subtotal,
+              capsterId: cap.id,
+              capsterName: cap.name,
+              capsterSharePct: c1.capsterSharePct,
+              capsterShareAmount: c1.capsterShareAmount,
+              shopShareAmount: c1.shopShareAmount,
+            });
+          }
+          renderCart();
+        }
+
+        function addProduct(prod) {
+          if (prod.stock <= 0) {
+            showToast('error', 'Stok ' + prod.name + ' habis.');
+            return;
+          }
+          var usedQty = cart
+            .filter(function (i) { return i.itemType === 'product' && i.refId === prod.id; })
+            .reduce(function (s, i) { return s + i.qty; }, 0);
+          if (usedQty >= prod.stock) {
+            showToast('error', 'Stok ' + prod.name + ' hanya tersisa ' + prod.stock + '.');
+            return;
+          }
+          var cap = prod.capsterCommissionPct > 0 ? getSelectedCapster() : null;
+          var existing = cart.find(function (i) {
+            return i.itemType === 'product' && i.refId === prod.id;
+          });
+          if (existing) {
+            existing.qty += 1;
+            var calc = FE.calculateProductLine(prod, existing.qty, Boolean(existing.capsterId));
+            existing.subtotal = calc.subtotal;
+            existing.capsterShareAmount = calc.capsterShareAmount;
+            existing.shopShareAmount = calc.shopShareAmount;
+          } else {
+            var c1 = FE.calculateProductLine(prod, 1, Boolean(cap));
+            cart.push({
+              id: DB.generateId('ln'),
+              itemType: 'product',
+              refId: prod.id,
+              name: prod.name,
+              qty: 1,
+              unitPrice: c1.unitPrice,
+              costPrice: c1.costPrice,
+              subtotal: c1.subtotal,
+              capsterId: cap ? cap.id : null,
+              capsterName: cap ? cap.name : null,
+              capsterSharePct: c1.capsterSharePct,
+              capsterShareAmount: c1.capsterShareAmount,
+              shopShareAmount: c1.shopShareAmount,
+            });
+          }
+          renderCart();
+        }
+
+        function handleBarcodeDetected(code) {
+          var clean = String(code || '').trim();
+          var found = state.products.find(function (p) { return p.active && p.barcode === clean; });
+          if (found) {
+            addProduct(found);
+            showToast('success', 'Barcode ' + clean + ': ' + found.name + ' ditambahkan ke keranjang.');
+          } else {
+            showToast('error', 'Produk dengan barcode "' + clean + '" tidak ditemukan.');
+          }
+        }
+
+        function renderCatalog() {
+          var q = document.getElementById('pos-search').value.trim().toLowerCase();
+          var grid = document.getElementById('catalog-grid');
+          if (activeTab === 'services') {
+            var list = state.services.filter(function (s) {
+              return s.active && (!q || s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q));
+            });
+            grid.innerHTML = list.map(function (srv) {
+              var sp = FE.calculateServiceLine(srv, 1);
+              return (
+                '<button type="button" class="catalog-card" data-srv="' + srv.id + '">' +
+                  '<div>' +
+                    '<div class="fs-11 text-muted">' + srv.category + ' · ' + srv.durationMin + ' menit</div>' +
+                    '<div class="fw-600" style="margin-top:4px;">' + srv.name + '</div>' +
+                  '</div>' +
+                  '<div class="catalog-card-foot">' +
+                    '<div class="mono fw-700" style="font-size:15px;">' + FE.formatRupiah(srv.price) + '</div>' +
+                    '<div class="fs-11 text-muted" style="margin-top:2px;">Capster ' + sp.capsterSharePct + '% (' + FE.formatRupiah(sp.capsterShareAmount) + ') · Toko ' + sp.shopSharePct + '%</div>' +
+                  '</div>' +
+                '</button>'
+              );
+            }).join('');
+            grid.querySelectorAll('[data-srv]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var s = state.services.find(function (x) { return x.id === btn.getAttribute('data-srv'); });
+                if (s) addService(s);
+              });
+            });
+          } else {
+            var plist = state.products.filter(function (p) {
+              return p.active && (!q || p.name.toLowerCase().includes(q) || p.barcode.toLowerCase().includes(q));
+            });
+            grid.innerHTML = plist.map(function (p) {
+              var empty = p.stock <= 0;
+              return (
+                '<button type="button" class="catalog-card" data-prd="' + p.id + '" ' + (empty ? 'disabled' : '') + '>' +
+                  '<div>' +
+                    '<div class="mono fs-11 text-muted">' + p.category + ' · ' + p.barcode + '</div>' +
+                    '<div class="fw-600" style="margin-top:4px;">' + p.name + '</div>' +
+                  '</div>' +
+                  '<div class="catalog-card-foot" style="display:flex;justify-content:space-between;align-items:flex-end;">' +
+                    '<div>' +
+                      '<div class="mono fw-700" style="font-size:15px;">' + FE.formatRupiah(p.sellPrice) + '</div>' +
+                      (p.capsterCommissionPct > 0 ? '<div class="fs-11 text-brass">Komisi capster ' + p.capsterCommissionPct + '%</div>' : '') +
+                    '</div>' +
+                    '<span class="mono fs-xs fw-600 ' + (p.stock <= p.minStock ? 'text-red' : 'text-secondary') + '">Stok ' + p.stock + '</span>' +
+                  '</div>' +
+                '</button>'
+              );
+            }).join('');
+            grid.querySelectorAll('[data-prd]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var p = state.products.find(function (x) { return x.id === btn.getAttribute('data-prd'); });
+                if (p) addProduct(p);
+              });
+            });
+          }
+        }
+
+        function renderCart() {
+          var totalItems = cart.reduce(function (s, i) { return s + i.qty; }, 0);
+          document.getElementById('cart-meta').textContent = 'Kasir: ' + ctx.user.name + ' · ' + totalItems + ' item';
+          document.getElementById('btn-clear-cart').classList.toggle('hidden', cart.length === 0);
+
+          var listEl = document.getElementById('cart-list');
+          if (cart.length === 0) {
+            listEl.innerHTML =
+              '<div class="text-center" style="padding:36px 8px;">' +
+                '<div class="fw-600 text-secondary">Belum ada item di keranjang</div>' +
+                '<div class="fs-xs text-muted" style="margin-top:4px;">Pilih layanan potong atau scan barcode produk di kiri.</div>' +
+              '</div>';
+          } else {
+            listEl.innerHTML = cart.map(function (item) {
+              return (
+                '<div class="cart-item">' +
+                  '<div style="min-width:0;flex:1;">' +
+                    '<div class="fw-600 truncate">' + item.name + '</div>' +
+                    '<div class="fs-11 text-muted">' +
+                      (item.itemType === 'service'
+                        ? 'Capster: ' + item.capsterName + ' · Bagi hasil ' + item.capsterSharePct + '%'
+                        : item.capsterName ? 'Produk · Ref: ' + item.capsterName : 'Produk Retail') +
+                    '</div>' +
+                    '<div class="mono fs-xs" style="margin-top:2px;">' + FE.formatRupiah(item.unitPrice) + ' × ' + item.qty + ' = <strong>' + FE.formatRupiah(item.subtotal) + '</strong></div>' +
+                  '</div>' +
+                  '<div class="qty-box">' +
+                    '<button type="button" class="qty-btn" data-qty-dec="' + item.id + '">-</button>' +
+                    '<span class="mono fs-xs fw-600" style="width:22px;text-align:center;">' + item.qty + '</span>' +
+                    '<button type="button" class="qty-btn" data-qty-inc="' + item.id + '">+</button>' +
+                  '</div>' +
+                '</div>'
+              );
+            }).join('');
+
+            listEl.querySelectorAll('[data-qty-dec]').forEach(function (b) {
+              b.addEventListener('click', function () { changeQty(b.getAttribute('data-qty-dec'), -1); });
+            });
+            listEl.querySelectorAll('[data-qty-inc]').forEach(function (b) {
+              b.addEventListener('click', function () { changeQty(b.getAttribute('data-qty-inc'), 1); });
+            });
+          }
+
+          updateTotals();
+        }
+
+        function changeQty(lineId, delta) {
+          var idx = cart.findIndex(function (i) { return i.id === lineId; });
+          if (idx < 0) return;
+          var item = cart[idx];
+          var nextQty = item.qty + delta;
+          if (nextQty <= 0) {
+            cart.splice(idx, 1);
+            renderCart();
+            return;
+          }
+          if (item.itemType === 'product') {
+            var prod = state.products.find(function (p) { return p.id === item.refId; });
+            if (prod && nextQty > prod.stock) {
+              showToast('error', 'Maksimal stok tersedia: ' + prod.stock);
+              return;
+            }
+            var cp = FE.calculateProductLine(prod || { sellPrice: item.unitPrice, costPrice: item.costPrice, capsterCommissionPct: item.capsterSharePct }, nextQty, Boolean(item.capsterId));
+            item.qty = nextQty;
+            item.subtotal = cp.subtotal;
+            item.capsterShareAmount = cp.capsterShareAmount;
+            item.shopShareAmount = cp.shopShareAmount;
+          } else {
+            var cs = FE.calculateServiceLine({ price: item.unitPrice, capsterSharePct: item.capsterSharePct }, nextQty);
+            item.qty = nextQty;
+            item.subtotal = cs.subtotal;
+            item.capsterShareAmount = cs.capsterShareAmount;
+            item.shopShareAmount = cs.shopShareAmount;
+          }
+          renderCart();
+        }
+
+        function updateTotals() {
+          var disc = Number(document.getElementById('cart-discount').value) || 0;
+          var paidInput = document.getElementById('cart-paid');
+          var rawPaid = paymentMethod === 'tunai' ? Number(paidInput.value) || 0 : 0;
+          var sum = FE.calculateCartSummary(cart, disc, rawPaid);
+
+          if (paymentMethod !== 'tunai') {
+            paidInput.value = sum.total;
+            sum = FE.calculateCartSummary(cart, disc, sum.total);
+          }
+
+          document.getElementById('sum-subtotal').textContent = FE.formatRupiah(sum.subtotal);
+          document.getElementById('sum-total').textContent = FE.formatRupiah(sum.total);
+          document.getElementById('sum-change').textContent = FE.formatRupiah(sum.changeAmount);
+
+          var showSplit = cart.length > 0 && ctx.user.role !== 'kasir';
+          var splitRow = document.getElementById('sum-split-row');
+          splitRow.classList.toggle('hidden', !showSplit);
+          if (showSplit) {
+            document.getElementById('sum-split-val').textContent =
+              'Capster ' + FE.formatRupiah(sum.totalCapsterShare) + ' · Toko ' + FE.formatRupiah(sum.totalShopGross);
+          }
+
+          var checkoutBtn = document.getElementById('btn-checkout');
+          checkoutBtn.disabled = cart.length === 0;
+          checkoutBtn.textContent =
+            cart.length > 0
+              ? 'Selesaikan & Cetak Struk (' + FE.formatRupiah(sum.total) + ')'
+              : 'Selesaikan & Cetak Struk';
+        }
+
+        // Event bindings
+        document.querySelectorAll('#catalog-tabs button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('#catalog-tabs button').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            activeTab = btn.getAttribute('data-tab');
+            renderCatalog();
+          });
+        });
+
+        document.getElementById('pos-search').addEventListener('input', renderCatalog);
+        document.getElementById('pos-search').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' && this.value.trim().length >= 6) {
+            var code = this.value.trim();
+            var match = state.products.find(function (p) { return p.active && p.barcode === code; });
+            if (match) {
+              addProduct(match);
+              this.value = '';
+              renderCatalog();
+            }
+          }
+        });
+
+        document.getElementById('btn-open-scanner').addEventListener('click', function () {
+          window.BarcodeScanner.openModal(state.products, handleBarcodeDetected);
+        });
+        window.BarcodeScanner.attachHidListener(handleBarcodeDetected);
+
+        document.getElementById('btn-clear-cart').addEventListener('click', function () {
+          cart = [];
+          renderCart();
+        });
+
+        document.getElementById('cart-discount').addEventListener('input', updateTotals);
+        document.getElementById('cart-paid').addEventListener('input', updateTotals);
+
+        document.querySelectorAll('#pay-methods button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('#pay-methods button').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            paymentMethod = btn.getAttribute('data-method');
+            document.getElementById('cash-box').classList.toggle('hidden', paymentMethod !== 'tunai');
+            updateTotals();
+          });
+        });
+
+        document.querySelectorAll('.quick-cash button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var disc = Number(document.getElementById('cart-discount').value) || 0;
+            var sum = FE.calculateCartSummary(cart, disc, 0);
+            var val = btn.getAttribute('data-cash');
+            document.getElementById('cart-paid').value = val === 'exact' ? sum.total : Number(val);
+            updateTotals();
+          });
+        });
+
+        document.getElementById('btn-checkout').addEventListener('click', async function () {
+          if (cart.length === 0) return;
+          var disc = Number(document.getElementById('cart-discount').value) || 0;
+          var paidVal = Number(document.getElementById('cart-paid').value) || 0;
+          var sum = FE.calculateCartSummary(cart, disc, paymentMethod === 'tunai' ? paidVal : 0);
+          var effectivePaid = paymentMethod === 'tunai' ? paidVal : sum.total;
+
+          if (paymentMethod === 'tunai' && effectivePaid < sum.total) {
+            showToast('error', 'Uang tunai diterima kurang dari total transaksi.');
+            return;
+          }
+
+          var trx = {
+            id: DB.generateId('trx'),
+            invoiceNo: DB.generateInvoiceNo(),
+            createdAt: new Date().toISOString(),
+            cashierId: ctx.user.id,
+            cashierName: ctx.user.name,
+            customerName: document.getElementById('cart-customer').value.trim() || 'Pelanggan Walk-in',
+            items: JSON.parse(JSON.stringify(cart)),
+            subtotal: sum.subtotal,
+            discount: sum.discount,
+            total: sum.total,
+            paidAmount: effectivePaid,
+            changeAmount: Math.max(0, effectivePaid - sum.total),
+            paymentMethod: paymentMethod,
+            totalCapsterShare: sum.totalCapsterShare,
+            totalShopServiceShare: sum.totalShopServiceShare,
+            totalProductSales: sum.totalProductSales,
+            totalProductCost: sum.totalProductCost,
+            status: 'completed',
+            synced: DB.isOnlineNow(),
+          };
+
+          state = await DB.simpanTransaksi(trx);
+
+          if (state.settings.autoPrintReceipt && window.ThermalPrinter.getStatus() && window.ThermalPrinter.getStatus().connected) {
+            window.ThermalPrinter.printLines(
+              window.ThermalPrinter.buildTransactionLines(trx, state.settings)
+            ).catch(function () {});
+          }
+
+          window.ThermalPrinter.openTransactionModal(trx, state.settings);
+
+          cart = [];
+          document.getElementById('cart-customer').value = '';
+          document.getElementById('cart-discount').value = 0;
+          document.getElementById('cart-paid').value = 0;
+          renderCatalog();
+          renderCart();
+          showToast('success', 'Transaksi ' + trx.invoiceNo + ' tersimpan' + (DB.isOnlineNow() ? '.' : ' secara offline (antre sinkronisasi).'));
+        });
+
+        renderCapsters();
+        renderCatalog();
+        renderCart();
+      })();
+    </script>
+  </body>
+</html>
