@@ -2,7 +2,14 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#14532D" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
     <title>Pengaturan, Printer &amp; Sinkronisasi — BarberDesk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,6 +20,7 @@
     <script src="./js/perhitungan.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/database.js"></script>
+    <script src="./js/firebase-config.js"></script>
     <script src="./js/printer.js"></script>
     <script src="./js/sidebar.js"></script>
   </head>
@@ -170,12 +178,16 @@
 
             <div class="panel panel-pad col-6" style="display:flex;flex-direction:column;gap:12px;">
               <div>
-                <h2 class="panel-title">Panduan Struktur Koleksi Firestore &amp; GitHub</h2>
-                <p class="panel-sub">Siap disambungkan ke proyek Firebase Firestore Anda melalui <code>BarberDB.setFirestoreAdapter(...)</code> di <code>js/database.js</code>.</p>
+                <h2 class="panel-title">Konfigurasi Firestore, Rules &amp; Service Worker</h2>
+                <p class="panel-sub">Tempel konfigurasi Web Firebase Anda di <code>js/firebase-config.js</code> dan pasang aturan keamanan dari file <code>firestore.rules</code>.</p>
+              </div>
+              <div class="grid-2 panel panel-pad" style="background:#F8FAFC;font-size:12px;">
+                <div><div class="text-muted">Service Worker (sw.js)</div><div class="fw-700" id="sw-status-val" style="margin-top:4px;">Memeriksa...</div></div>
+                <div><div class="text-muted">Koneksi Firestore</div><div class="fw-700" id="fb-status-val" style="margin-top:4px;">Mode Lokal</div></div>
               </div>
               <div id="firestore-schema-list"></div>
               <div class="notice warning">
-                Saat menghubungkan ke Firestore, aktifkan <strong>persistentLocalCache()</strong> agar cache lokal dan antrean sinkronisasi offline tetap berjalan mulus di browser.
+                Pastikan <strong>firestore.rules</strong> sudah di-publish di Firebase Console agar data hanya bisa diakses akun staf yang sudah login Firebase Auth (tanpa kebocoran password).
               </div>
             </div>
           </section>
@@ -413,6 +425,22 @@
                 return '<div class="notice warning" style="display:flex;justify-content:space-between;margin-bottom:6px;"><span class="mono fw-600">' + m.action + ' (' + m.collection + ')</span><span>' + FE.formatDateTime(m.createdAt) + '</span></div>';
               }).join('')
             : '<p class="fs-xs text-muted">Tidak ada antrean offline. Seluruh perubahan sudah tersinkron.</p>';
+          var swEl = document.getElementById('sw-status-val');
+          if (swEl) {
+            if ('serviceWorker' in navigator) {
+              var reg = await navigator.serviceWorker.getRegistration();
+              swEl.textContent = reg && (reg.active || reg.waiting || reg.installing) ? 'Aktif (Offline Siap)' : 'Terdaftar';
+              swEl.className = 'fw-700 text-emerald';
+            } else {
+              swEl.textContent = 'Tidak didukung browser';
+            }
+          }
+          var fbEl = document.getElementById('fb-status-val');
+          if (fbEl) {
+            var fbReady = Boolean(window.BarberFirebase && window.BarberFirebase.isConfigured());
+            fbEl.textContent = fbReady ? 'Terhubung (Cloud Sync)' : 'Belum diisi (js/firebase-config.js)';
+            fbEl.className = 'fw-700 ' + (fbReady ? 'text-emerald' : 'text-brass');
+          }
         }
 
         document.getElementById('firestore-schema-list').innerHTML = DB.FIRESTORE_COLLECTIONS.map(function (c) {
