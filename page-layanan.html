@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Layanan &amp; Tarif 40/60 — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Layanan &amp; Tarif Bagi Hasil</h1>
+              <p class="page-subtitle" id="layanan-subtitle">
+                Atur harga jasa pangkas dan persentase bagi hasil otomatis Capster / Toko sesuai pengaturan.
+              </p>
+            </div>
+            <div class="header-actions">
+              <button type="button" id="btn-add-service" class="btn btn-primary hidden">Tambah Layanan</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Layanan</th>
+                    <th>Kategori &amp; Durasi</th>
+                    <th class="text-right">Tarif Pelanggan</th>
+                    <th class="text-right">Hak Capster</th>
+                    <th class="text-right">Bagian Toko</th>
+                    <th class="text-right" id="th-srv-action">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="services-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal Tambah/Edit Layanan -->
+    <div id="service-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title" id="srv-modal-title">Tambah Layanan</h3>
+          <button type="button" class="btn-icon" id="close-srv-modal">✕</button>
+        </div>
+        <form id="srv-form">
+          <div class="modal-body">
+            <input type="hidden" id="srv-id" />
+            <div class="form-group">
+              <label class="form-label" for="srv-name">Nama Layanan</label>
+              <input type="text" id="srv-name" class="input" placeholder="Contoh: Gentleman Haircut" required />
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="srv-cat">Kategori</label>
+                <select id="srv-cat" class="select">
+                  <option value="Potong Rambut">Potong Rambut</option>
+                  <option value="Paket Kombo">Paket Kombo</option>
+                  <option value="Perawatan">Perawatan</option>
+                  <option value="Pewarnaan">Pewarnaan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="srv-dur">Durasi (Menit)</label>
+                <input type="number" id="srv-dur" class="input mono" min="5" value="35" required />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="srv-price">Tarif Pelanggan (Rp)</label>
+                <input type="number" id="srv-price" class="input mono" min="0" step="1000" value="50000" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="srv-pct">Bagi Hasil Capster (%)</label>
+                <input type="number" id="srv-pct" class="input mono" min="0" max="100" value="40" required />
+              </div>
+            </div>
+            <div class="panel panel-pad" style="background:#F8FAFC;">
+              <div class="fs-xs fw-600" style="margin-bottom:8px;">Simulasi Pembagian Otomatis:</div>
+              <div class="summary-row fs-xs">
+                <span id="sim-cap-label">Hak Capster (40%)</span>
+                <strong class="mono text-brass" id="sim-cap-val">Rp 20.000</strong>
+              </div>
+              <div class="summary-row fs-xs" style="margin-top:4px;">
+                <span id="sim-shop-label">Bagian Toko (60%)</span>
+                <strong class="mono text-green" id="sim-shop-val">Rp 30.000</strong>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-srv-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Layanan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('layanan', 'Layanan & Tarif');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var canEdit = ctx.perms.canEditServices;
+
+        if (canEdit) {
+          document.getElementById('btn-add-service').classList.remove('hidden');
+        } else {
+          document.getElementById('th-srv-action').classList.add('hidden');
+        }
+
+        function updateSim() {
+          var price = Number(document.getElementById('srv-price').value) || 0;
+          var pct = Number(document.getElementById('srv-pct').value) || 0;
+          var sp = FE.calculateServiceLine({ price: price, capsterSharePct: pct }, 1);
+          document.getElementById('sim-cap-label').textContent = 'Hak Capster (' + sp.capsterSharePct + '%)';
+          document.getElementById('sim-cap-val').textContent = FE.formatRupiah(sp.capsterShareAmount);
+          document.getElementById('sim-shop-label').textContent = 'Bagian Toko (' + sp.shopSharePct + '%)';
+          document.getElementById('sim-shop-val').textContent = FE.formatRupiah(sp.shopShareAmount);
+        }
+
+        async function renderTable() {
+          var db = await DB.loadState();
+          var split = FE.getSplitConfig(db.settings);
+          var subEl = document.getElementById('layanan-subtitle');
+          if (subEl) {
+            subEl.textContent = 'Atur harga jasa pangkas dan persentase bagi hasil otomatis Capster / Toko (default saat ini: ' + split.label + ' — dapat diubah di Pengaturan atau per layanan).';
+          }
+          var tbody = document.getElementById('services-tbody');
+          tbody.innerHTML = db.services.map(function (s) {
+            var sp = FE.calculateServiceLine(s, 1, split.capsterPct);
+            return (
+              '<tr>' +
+                '<td class="fw-600">' + s.name + '</td>' +
+                '<td class="fs-xs text-muted">' + s.category + ' · ' + s.durationMin + ' menit</td>' +
+                '<td class="text-right nowrap mono fw-600">' + FE.formatRupiah(s.price) + '</td>' +
+                '<td class="text-right nowrap mono fs-xs text-brass">' + FE.formatRupiah(sp.capsterShareAmount) + ' <span class="text-muted">(' + sp.capsterSharePct + '%)</span></td>' +
+                '<td class="text-right nowrap mono fs-xs text-green">' + FE.formatRupiah(sp.shopShareAmount) + ' <span class="text-muted">(' + sp.shopSharePct + '%)</span></td>' +
+                (canEdit
+                  ? '<td class="text-right nowrap">' +
+                      '<button type="button" class="btn btn-outline btn-sm" data-edit="' + s.id + '">Ubah</button> ' +
+                      '<button type="button" class="btn btn-danger-outline btn-sm" data-del="' + s.id + '">Hapus</button>' +
+                    '</td>'
+                  : '') +
+              '</tr>'
+            );
+          }).join('');
+
+          if (canEdit) {
+            tbody.querySelectorAll('[data-edit]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var st = await DB.loadState();
+                var item = st.services.find(function (x) { return x.id === b.getAttribute('data-edit'); });
+                if (!item) return;
+                openModal(item);
+              });
+            });
+            tbody.querySelectorAll('[data-del]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var id = b.getAttribute('data-del');
+                await DB.hapusLayanan(id);
+                renderTable();
+              });
+            });
+          }
+        }
+
+        async function openModal(item) {
+          var db = await DB.loadState();
+          var split = FE.getSplitConfig(db.settings);
+          document.getElementById('srv-modal-title').textContent = item ? 'Ubah Layanan' : 'Tambah Layanan Baru';
+          document.getElementById('srv-id').value = item ? item.id : '';
+          document.getElementById('srv-name').value = item ? item.name : '';
+          document.getElementById('srv-cat').value = item ? item.category : 'Potong Rambut';
+          document.getElementById('srv-dur').value = item ? item.durationMin : 35;
+          document.getElementById('srv-price').value = item ? item.price : 50000;
+          document.getElementById('srv-pct').value = item ? item.capsterSharePct : split.capsterPct;
+          updateSim();
+          document.getElementById('service-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+          document.getElementById('service-modal').classList.add('hidden');
+        }
+
+        document.getElementById('btn-add-service').addEventListener('click', function () { openModal(null); });
+        document.getElementById('close-srv-modal').addEventListener('click', closeModal);
+        document.getElementById('cancel-srv-modal').addEventListener('click', closeModal);
+        document.getElementById('srv-price').addEventListener('input', updateSim);
+        document.getElementById('srv-pct').addEventListener('input', updateSim);
+
+        document.getElementById('srv-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var existingId = document.getElementById('srv-id').value;
+          var pct = Math.max(0, Math.min(100, Number(document.getElementById('srv-pct').value) || 0));
+          var payload = {
+            id: existingId || DB.generateId('srv'),
+            name: document.getElementById('srv-name').value.trim(),
+            category: document.getElementById('srv-cat').value,
+            durationMin: Math.max(5, Number(document.getElementById('srv-dur').value) || 30),
+            price: Math.max(0, Number(document.getElementById('srv-price').value) || 0),
+            capsterSharePct: pct,
+            shopSharePct: 100 - pct,
+            active: true,
+            updatedAt: new Date().toISOString(),
+          };
+          await DB.simpanLayanan(payload);
+          closeModal();
+          renderTable();
+        });
+
+        renderTable();
+      })();
+    </script>
+  </body>
+</html>
