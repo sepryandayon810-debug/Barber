@@ -333,7 +333,9 @@
     }
 
     if (typeof firestoreAdapter === 'function') {
-      await firestoreAdapter(queue);
+      for (var i = 0; i < queue.length; i++) {
+  await firestoreAdapter(queue[i]);
+}
     }
 
     var state = await loadState();
