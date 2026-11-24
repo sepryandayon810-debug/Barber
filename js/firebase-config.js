@@ -21,7 +21,6 @@
   var ENABLE_FIREBASE = false; // Ubah ke true setelah FIREBASE_CONFIG diisi
 
   var FIREBASE_CONFIG = {
-  const firebaseConfig = {
   apiKey: "AIzaSyB7e-kIDuXoMoBKBxExEdpmIA90fkPYvPc",
   authDomain: "hifzipay.firebaseapp.com",
   projectId: "hifzipay",
