@@ -3,15 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Masuk — BarberDesk POS Barbershop</title>
+    <meta name="theme-color" content="#14532D" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="BarberDesk" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <title>Masuk — BarberDesk</title>
     <meta
       name="description"
-      content="Aplikasi POS Barbershop berbasis HTML (multi-page page-*.html) dengan bagi hasil capster 40/60, penjualan barang, penggajian otomatis, scan barcode, cetak struk thermal Bluetooth, dan sinkronisasi online-offline."
+      content="Aplikasi POS Barbershop responsif HP & Desktop dengan bagi hasil fleksibel, penjualan barang, penggajian otomatis, scan barcode, cetak struk thermal Bluetooth, dan mode offline-online."
     />
     <meta property="og:title" content="BarberDesk — Kasir & Manajemen Barbershop" />
     <meta
       property="og:description"
-      content="Sistem kasir barbershop responsif HP & Desktop dengan bagi hasil 40% capster / 60% toko, stok barang, penggajian, scan barcode, printer thermal Bluetooth, dan mode offline-online."
+      content="Sistem kasir barbershop responsif HP & Desktop dengan bagi hasil fleksibel, stok barang, penggajian, scan barcode, printer thermal Bluetooth, dan mode offline-online."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,18 +30,17 @@
     <script src="./js/perhitungan.js"></script>
     <script src="./js/auth.js"></script>
     <script src="./js/database.js"></script>
+    <script src="./js/firebase-config.js"></script>
     <script src="./js/sidebar.js"></script>
     <style>
       .mobile-login-brand {
         display: none;
         align-items: center;
         justify-content: space-between;
-        padding-bottom: 14px;
+        padding-bottom: 16px;
         border-bottom: 1px solid var(--border-color);
       }
-      .pass-wrap {
-        position: relative;
-      }
+      .pass-wrap { position: relative; }
       .pass-toggle {
         position: absolute;
         right: 10px;
@@ -47,32 +54,50 @@
         cursor: pointer;
         padding: 4px 6px;
       }
-      .pass-toggle:hover {
-        color: var(--text-primary);
+      .pass-toggle:hover { color: var(--text-primary); }
+      .login-card-surface {
+        width: 100%;
+        max-width: 420px;
+        background: #FFFFFF;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 32px 28px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+      }
+      .setup-banner {
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #ECFDF5;
+        border: 1px solid #A7F3D0;
+        color: #065F46;
+        font-size: 12px;
+        line-height: 1.5;
       }
       @media (max-width: 900px) {
         .mobile-login-brand { display: flex; }
         .login-panel {
           min-height: 100vh;
-          align-items: flex-start;
-          padding: 24px 16px 36px;
+          align-items: center;
+          padding: 20px 16px;
+          background: linear-gradient(180deg, #111315 0%, #111315 28%, #F8F9FA 28%, #F8F9FA 100%);
         }
-        .login-box {
-          background: #FFFFFF;
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          padding: 22px 18px;
+        .login-card-surface {
+          padding: 24px 20px;
+          box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
         }
       }
     </style>
   </head>
   <body>
     <div class="login-shell">
-      <!-- Panel Editorial Kiri (Desktop) -->
+      <!-- Panel Foto Kiri (Desktop) -->
       <section class="login-hero">
         <img
           src="./assets/images/barber_studio_interior.jpg"
-          alt="Interior Studio Barbershop BarberDesk"
+          alt="Interior Studio Barbershop"
           referrerpolicy="no-referrer"
           onerror="this.style.display='none'"
         />
@@ -92,9 +117,9 @@
         </div>
       </section>
 
-      <!-- Panel Login Kanan (Desktop & Mobile First) -->
+      <!-- Panel Login / Aktivasi Kanan (Desktop & Mobile First) -->
       <main class="login-panel">
-        <div class="login-box">
+        <div class="login-card-surface">
           <div class="mobile-login-brand">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="brand-mark">
@@ -111,54 +136,101 @@
             <span class="fs-11 text-muted mono" id="login-net-status">Online</span>
           </div>
 
-          <div>
-            <h2 class="page-title">Masuk ke Sistem Kasir</h2>
-            <p class="page-subtitle">
-              Login dengan username &amp; password/PIN sesuai jabatan Anda. Mendukung login saat offline.
-            </p>
-          </div>
-
-          <form id="login-form" style="display:flex;flex-direction:column;gap:14px;">
-            <div class="form-group">
-              <label class="form-label" for="login-username">Username</label>
-              <input
-                id="login-username"
-                type="text"
-                class="input"
-                autocomplete="username"
-                placeholder="Masukkan username"
-                required
-              />
+          <!-- MODE 1: LOGIN STANDAR -->
+          <div id="login-view">
+            <div style="margin-bottom:18px;">
+              <h2 class="page-title">Masuk ke Sistem Kasir</h2>
+              <p class="page-subtitle">
+                Masuk dengan username &amp; password sesuai jabatan Anda. Mendukung login saat offline.
+              </p>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="login-password">Password / PIN</label>
-              <div class="pass-wrap">
+            <form id="login-form" style="display:flex;flex-direction:column;gap:14px;">
+              <div class="form-group">
+                <label class="form-label" for="login-username">Username / Email</label>
                 <input
-                  id="login-password"
-                  type="password"
+                  id="login-username"
+                  type="text"
                   class="input"
-                  style="padding-right:70px;"
-                  autocomplete="current-password"
-                  placeholder="Masukkan password atau PIN"
+                  autocomplete="username"
+                  placeholder="Masukkan username Anda"
                   required
                 />
-                <button type="button" id="toggle-pass-btn" class="pass-toggle">Lihat</button>
               </div>
+
+              <div class="form-group">
+                <label class="form-label" for="login-password">Password / PIN</label>
+                <div class="pass-wrap">
+                  <input
+                    id="login-password"
+                    type="password"
+                    class="input"
+                    style="padding-right:70px;"
+                    autocomplete="current-password"
+                    placeholder="Masukkan password atau PIN"
+                    required
+                  />
+                  <button type="button" id="toggle-pass-btn" class="pass-toggle">Lihat</button>
+                </div>
+              </div>
+
+              <div id="login-error" class="notice error hidden"></div>
+
+              <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width:100%;padding:12px 16px;">
+                Masuk ke Aplikasi
+              </button>
+            </form>
+          </div>
+
+          <!-- MODE 2: AKTIVASI AKUN PERTAMA (TANPA PASSWORD BAWAAN DI GITHUB) -->
+          <div id="setup-view" class="hidden">
+            <div style="margin-bottom:14px;">
+              <h2 class="page-title">Aktivasi Akun Utama</h2>
+              <p class="page-subtitle">
+                Buat akun Developer / Owner pertama Anda secara pribadi. Tidak ada password bawaan yang tertanam di kode.
+              </p>
             </div>
 
-            <div id="login-error" class="notice error hidden"></div>
+            <div class="setup-banner" style="margin-bottom:14px;">
+              Langkah ini hanya muncul <strong>1 kali</strong> pada pemasangan baru. Setelah selesai, akun tambahan (Admin &amp; Kasir) dapat dibuat dari menu <strong>Kelola Akun</strong>.
+            </div>
 
-            <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width:100%;padding:12px 16px;">
-              Masuk ke Aplikasi
-            </button>
-          </form>
+            <form id="setup-form" style="display:flex;flex-direction:column;gap:12px;">
+              <div class="form-group">
+                <label class="form-label" for="setup-name">Nama Lengkap</label>
+                <input id="setup-name" type="text" class="input" placeholder="Contoh: Sepryan Owner" required />
+              </div>
+              <div class="grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="setup-username">Username</label>
+                  <input id="setup-username" type="text" class="input mono" placeholder="contoh: owner" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="setup-role">Jabatan Utama</label>
+                  <select id="setup-role" class="select">
+                    <option value="developer">Developer (Penuh)</option>
+                    <option value="owner">Owner (Pemilik)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="setup-password">Buat Password Rahasia (Min. 6 karakter)</label>
+                <input id="setup-password" type="password" class="input" minlength="6" placeholder="Minimal 6 karakter" autocomplete="new-password" required />
+              </div>
+
+              <div id="setup-error" class="notice error hidden"></div>
+
+              <button type="submit" id="btn-setup-submit" class="btn btn-primary" style="width:100%;padding:12px 16px;">
+                Aktifkan Akun &amp; Masuk
+              </button>
+            </form>
+          </div>
         </div>
       </main>
     </div>
 
     <script>
-      (function () {
+      (async function () {
         var existing = window.AuthRBAC.getSession();
         if (existing) {
           window.location.href = window.AuthRBAC.getDefaultPageUrl(existing.role);
@@ -173,14 +245,21 @@
         window.addEventListener('online', updateNetLabel);
         window.addEventListener('offline', updateNetLabel);
 
-        window.BarberDB.loadState().then(function (db) {
+        try {
+          var db = await window.BarberDB.loadState();
           var appName = (db.settings && db.settings.appName) || 'BarberDesk';
           document.title = 'Masuk — ' + appName;
           var heroBrand = document.getElementById('login-brand-hero');
           var mobBrand = document.getElementById('login-brand-mobile');
           if (heroBrand) heroBrand.textContent = appName;
           if (mobBrand) mobBrand.textContent = appName;
-        }).catch(function () {});
+
+          var needSetup = await window.AuthRBAC.needsInitialSetup();
+          if (needSetup) {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('setup-view').classList.remove('hidden');
+          }
+        } catch (e) {}
 
         var usernameEl = document.getElementById('login-username');
         var passwordEl = document.getElementById('login-password');
@@ -209,6 +288,31 @@
           } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Masuk ke Aplikasi';
+          }
+        });
+
+        document.getElementById('setup-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var sErr = document.getElementById('setup-error');
+          sErr.classList.add('hidden');
+          var btn = document.getElementById('btn-setup-submit');
+          btn.disabled = true;
+          btn.textContent = 'Menyimpan akun...';
+
+          try {
+            var user = await window.AuthRBAC.setupInitialOwner(
+              document.getElementById('setup-name').value,
+              document.getElementById('setup-username').value,
+              document.getElementById('setup-password').value,
+              document.getElementById('setup-role').value
+            );
+            window.location.href = window.AuthRBAC.getDefaultPageUrl(user.role);
+          } catch (err) {
+            sErr.textContent = err && err.message ? err.message : 'Gagal membuat akun utama.';
+            sErr.classList.remove('hidden');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Aktifkan Akun & Masuk';
           }
         });
       })();
