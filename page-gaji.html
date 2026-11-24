@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Capster &amp; Penggajian — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/printer.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Capster &amp; Penggajian Bagi Hasil</h1>
+              <p class="page-subtitle" id="gaji-subtitle">
+                Hitung gaji otomatis dari komisi jasa + komisi produk, tunjangan, bonus, dan potongan kasbon.
+              </p>
+            </div>
+            <div class="header-actions">
+              <div class="date-range-box">
+                <input type="date" id="pay-start" />
+                <span class="text-muted">s/d</span>
+                <input type="date" id="pay-end" />
+              </div>
+              <button type="button" id="btn-add-capster" class="btn btn-primary hidden">Tambah Capster</button>
+            </div>
+          </div>
+
+          <section class="grid-3" id="pay-kpi-strip"></section>
+
+          <!-- Tabel Rekap Komisi & Gaji Capster -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title" id="pay-table-title">Rekap Komisi &amp; Estimasi Gaji</h2>
+                <p class="panel-sub hidden" id="admin-payroll-note" style="color:#B45309;">
+                  Mode Admin: Anda dapat memantau rekap komisi capster. Pencairan gaji hanya dapat dilakukan oleh Owner / Developer.
+                </p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Capster</th>
+                    <th class="text-right">Jasa</th>
+                    <th class="text-right">Omzet Jasa</th>
+                    <th class="text-right" id="th-cap-comm">Komisi Jasa</th>
+                    <th class="text-right">Komisi Produk</th>
+                    <th class="text-right">Tunjangan</th>
+                    <th class="text-right">Estimasi Total</th>
+                    <th class="text-right" id="th-pay-action">Pencairan</th>
+                  </tr>
+                </thead>
+                <tbody id="payroll-calc-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Riwayat Slip Gaji -->
+          <div class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Riwayat Pencairan &amp; Slip Gaji</h2>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>No Slip / Tanggal</th>
+                    <th>Capster &amp; Periode</th>
+                    <th class="text-right">Komisi + Tunjangan</th>
+                    <th class="text-right">Potongan</th>
+                    <th class="text-right">Total Diterima</th>
+                    <th class="text-right">Slip</th>
+                  </tr>
+                </thead>
+                <tbody id="payroll-history-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal Cairkan Gaji -->
+    <div id="payout-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <h3 class="panel-title" id="payout-title">Cairkan Gaji</h3>
+            <p class="panel-sub" id="payout-period-label"></p>
+          </div>
+          <button type="button" class="btn-icon" id="close-payout-modal">✕</button>
+        </div>
+        <form id="payout-form">
+          <div class="modal-body">
+            <div class="panel panel-pad" style="background:#F8FAFC;">
+              <div class="summary-row fs-xs">
+                <span id="po-srv-label">Komisi Jasa (40%)</span>
+                <strong class="mono" id="po-srv-val">Rp 0</strong>
+              </div>
+              <div class="summary-row fs-xs" style="margin-top:4px;">
+                <span>Komisi Penjualan Produk</span>
+                <strong class="mono" id="po-prd-val">Rp 0</strong>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="po-allowance">Tunjangan / Pokok (Rp)</label>
+                <input type="number" id="po-allowance" class="input mono" min="0" value="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="po-bonus">Bonus (Rp)</label>
+                <input type="number" id="po-bonus" class="input mono" min="0" value="0" />
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="po-deduct">Potongan / Kasbon (Rp)</label>
+                <input type="number" id="po-deduct" class="input mono" min="0" value="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="po-note">Catatan Potongan</label>
+                <input type="text" id="po-note" class="input" placeholder="Opsional (kasbon)" />
+              </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;">
+              <input type="checkbox" id="po-record-exp" checked />
+              Catat otomatis ke arus kas keluar (Kategori: Gaji &amp; Komisi)
+            </label>
+            <div class="summary-row summary-total">
+              <span>Total Gaji Dibayarkan</span>
+              <span class="mono text-green" style="font-size:20px;" id="po-net-preview">Rp 0</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-payout-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Cairkan &amp; Cetak Slip</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Tambah Capster -->
+    <div id="capster-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title">Tambah Capster Baru</h3>
+          <button type="button" class="btn-icon" id="close-cap-modal">✕</button>
+        </div>
+        <form id="cap-form">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label" for="cap-name">Nama Lengkap Capster</label>
+              <input type="text" id="cap-name" class="input" placeholder="Contoh: Dimas Kurniawan" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cap-phone">No. HP / WhatsApp</label>
+              <input type="text" id="cap-phone" class="input" placeholder="0812-xxxx-xxxx" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cap-spec">Keahlian Utama</label>
+              <input type="text" id="cap-spec" class="input" placeholder="Contoh: Skin Fade & Pompadour" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="cap-allow">Tunjangan / Uang Makan Default (Rp)</label>
+              <input type="number" id="cap-allow" class="input mono" min="0" step="50000" value="250000" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-cap-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Capster</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('gaji', 'Capster & Penggajian');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var canDisburse = ctx.perms.canDisbursePayroll;
+
+        if (ctx.perms.canManageCapsters) document.getElementById('btn-add-capster').classList.remove('hidden');
+        if (!canDisburse) {
+          document.getElementById('th-pay-action').classList.add('hidden');
+          document.getElementById('admin-payroll-note').classList.remove('hidden');
+        }
+
+        var startEl = document.getElementById('pay-start');
+        var endEl = document.getElementById('pay-end');
+        startEl.value = FE.daysAgoYmd(29);
+        endEl.value = FE.todayYmd();
+
+        var activePayoutTarget = null;
+
+        function updatePayoutPreview() {
+          if (!activePayoutTarget) return;
+          var net = FE.calculatePayrollNetPay(
+            activePayoutTarget,
+            document.getElementById('po-allowance').value,
+            document.getElementById('po-bonus').value,
+            document.getElementById('po-deduct').value
+          );
+          document.getElementById('po-net-preview').textContent = FE.formatRupiah(net);
+        }
+
+        async function renderPayroll() {
+          var db = await DB.loadState();
+          var split = FE.getSplitConfig(db.settings);
+          var start = startEl.value;
+          var end = endEl.value;
+          var rows = FE.calculateCapsterPayroll(db, start, end);
+
+          var gajiSub = document.getElementById('gaji-subtitle');
+          if (gajiSub) {
+            gajiSub.textContent = 'Hitung gaji otomatis dari komisi jasa (' + split.label + ') + komisi produk, tunjangan, bonus, dan potongan kasbon.';
+          }
+          var thCap = document.getElementById('th-cap-comm');
+          if (thCap) thCap.textContent = 'Komisi Jasa (' + split.capsterPct + '%)';
+
+          var totSrv = rows.reduce(function (s, r) { return s + r.serviceCount; }, 0);
+          var totGross = rows.reduce(function (s, r) { return s + r.grossServiceRevenue; }, 0);
+          var totComm = rows.reduce(function (s, r) { return s + r.totalEarnedCommission; }, 0);
+          var totShop = rows.reduce(function (s, r) { return s + r.shopServiceContribution; }, 0);
+
+          document.getElementById('pay-kpi-strip').innerHTML =
+            '<div class="kpi-card"><div class="kpi-label">Total Omzet Jasa (' + totSrv + ' layanan)</div><div class="kpi-value">' + FE.formatRupiah(totGross) + '</div></div>' +
+            '<div class="kpi-card"><div class="kpi-label">Total Hak Komisi Capster (' + split.capsterPct + '% + Produk)</div><div class="kpi-value text-brass">' + FE.formatRupiah(totComm) + '</div></div>' +
+            '<div class="kpi-card"><div class="kpi-label">Kontribusi Jasa Untuk Toko (' + split.shopPct + '%)</div><div class="kpi-value text-green">' + FE.formatRupiah(totShop) + '</div></div>';
+
+          document.getElementById('pay-table-title').textContent =
+            'Rekap Komisi & Estimasi Gaji (' + FE.formatDateShort(start) + ' — ' + FE.formatDateShort(end) + ')';
+
+          var tbody = document.getElementById('payroll-calc-tbody');
+          tbody.innerHTML = rows.map(function (r) {
+            var est = r.totalEarnedCommission + (r.capster.baseAllowance || 0);
+            return (
+              '<tr>' +
+                '<td><div class="fw-600">' + r.capster.name + '</div><div class="fs-11 text-muted">' + r.capster.specialty + ' · ' + r.capster.phone + '</div></td>' +
+                '<td class="text-right nowrap mono fs-xs">' + r.serviceCount + '×</td>' +
+                '<td class="text-right nowrap mono fs-xs">' + FE.formatRupiah(r.grossServiceRevenue) + '</td>' +
+                '<td class="text-right nowrap mono fs-xs fw-600 text-brass">' + FE.formatRupiah(r.serviceCommission) + '</td>' +
+                '<td class="text-right nowrap mono fs-xs">' + FE.formatRupiah(r.productCommission) + '</td>' +
+                '<td class="text-right nowrap mono fs-xs">' + FE.formatRupiah(r.capster.baseAllowance || 0) + '</td>' +
+                '<td class="text-right nowrap mono fw-700">' + FE.formatRupiah(est) +
+                  (r.alreadyPaidInPeriod > 0 ? '<div class="fs-11 text-emerald" style="font-family:var(--font-sans);font-weight:500;">Sudah dibayar di periode ini</div>' : '') +
+                '</td>' +
+                (canDisburse
+                  ? '<td class="text-right nowrap"><button type="button" class="btn btn-primary btn-sm" data-pay-cap="' + r.capster.id + '">Cairkan Gaji</button></td>'
+                  : '') +
+              '</tr>'
+            );
+          }).join('');
+
+          if (canDisburse) {
+            tbody.querySelectorAll('[data-pay-cap]').forEach(function (b) {
+              b.addEventListener('click', function () {
+                var target = rows.find(function (x) { return x.capster.id === b.getAttribute('data-pay-cap'); });
+                if (!target) return;
+                activePayoutTarget = target;
+                document.getElementById('payout-title').textContent = 'Cairkan Gaji — ' + target.capster.name;
+                document.getElementById('payout-period-label').textContent = 'Periode ' + FE.formatDateShort(start) + ' s/d ' + FE.formatDateShort(end);
+                document.getElementById('po-srv-label').textContent = 'Komisi Jasa (' + target.serviceCount + ' layanan)';
+                document.getElementById('po-srv-val').textContent = FE.formatRupiah(target.serviceCommission);
+                document.getElementById('po-prd-val').textContent = FE.formatRupiah(target.productCommission);
+                document.getElementById('po-allowance').value = target.capster.baseAllowance || 0;
+                document.getElementById('po-bonus').value = 0;
+                document.getElementById('po-deduct').value = 0;
+                document.getElementById('po-note').value = '';
+                document.getElementById('po-record-exp').checked = true;
+                updatePayoutPreview();
+                document.getElementById('payout-modal').classList.remove('hidden');
+              });
+            });
+          }
+
+          var histBody = document.getElementById('payroll-history-tbody');
+          histBody.innerHTML = db.payrolls.length
+            ? db.payrolls.map(function (p) {
+                var gross = p.serviceCommission + p.productCommission + p.baseAllowance + p.bonus;
+                return (
+                  '<tr>' +
+                    '<td class="nowrap"><div class="mono fs-xs fw-600">' + p.slipNo + '</div><div class="fs-11 text-muted">' + FE.formatDateTime(p.paidAt) + '</div></td>' +
+                    '<td><div class="fw-600 fs-xs">' + p.capsterName + '</div><div class="fs-11 text-muted">' + FE.formatDateShort(p.periodStart) + ' — ' + FE.formatDateShort(p.periodEnd) + ' · ' + p.serviceCount + ' jasa</div></td>' +
+                    '<td class="text-right nowrap mono fs-xs">' + FE.formatRupiah(gross) + '</td>' +
+                    '<td class="text-right nowrap mono fs-xs text-red">' + (p.deductions > 0 ? '-' + FE.formatRupiah(p.deductions) : '—') + '</td>' +
+                    '<td class="text-right nowrap mono fs-xs fw-700 text-green">' + FE.formatRupiah(p.netPay) + '</td>' +
+                    '<td class="text-right nowrap"><button type="button" class="btn btn-outline btn-sm" data-slip="' + p.id + '">Slip Gaji</button></td>' +
+                  '</tr>'
+                );
+              }).join('')
+            : '<tr><td colspan="6" class="text-center fs-xs text-muted" style="padding:28px;">Belum ada pencairan gaji. Klik "Cairkan Gaji" di atas untuk menerbitkan slip gaji capster.</td></tr>';
+
+          histBody.querySelectorAll('[data-slip]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var pay = db.payrolls.find(function (x) { return x.id === b.getAttribute('data-slip'); });
+              if (pay) window.ThermalPrinter.openPayrollModal(pay, db.settings);
+            });
+          });
+        }
+
+        startEl.addEventListener('change', renderPayroll);
+        endEl.addEventListener('change', renderPayroll);
+        ['po-allowance', 'po-bonus', 'po-deduct'].forEach(function (id) {
+          document.getElementById(id).addEventListener('input', updatePayoutPreview);
+        });
+
+        document.getElementById('close-payout-modal').addEventListener('click', function () {
+          document.getElementById('payout-modal').classList.add('hidden');
+        });
+        document.getElementById('cancel-payout-modal').addEventListener('click', function () {
+          document.getElementById('payout-modal').classList.add('hidden');
+        });
+
+        document.getElementById('payout-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          if (!activePayoutTarget) return;
+          var allowance = Math.max(0, Number(document.getElementById('po-allowance').value) || 0);
+          var bonus = Math.max(0, Number(document.getElementById('po-bonus').value) || 0);
+          var deduct = Math.max(0, Number(document.getElementById('po-deduct').value) || 0);
+          var recExp = document.getElementById('po-record-exp').checked;
+          var netPay = FE.calculatePayrollNetPay(activePayoutTarget, allowance, bonus, deduct);
+
+          var record = {
+            id: DB.generateId('pay'),
+            slipNo: DB.generateSlipNo(),
+            capsterId: activePayoutTarget.capster.id,
+            capsterName: activePayoutTarget.capster.name,
+            periodStart: startEl.value,
+            periodEnd: endEl.value,
+            serviceCount: activePayoutTarget.serviceCount,
+            grossServiceRevenue: activePayoutTarget.grossServiceRevenue,
+            serviceCommission: activePayoutTarget.serviceCommission,
+            productCommission: activePayoutTarget.productCommission,
+            baseAllowance: allowance,
+            bonus: bonus,
+            deductions: deduct,
+            deductionNote: document.getElementById('po-note').value.trim(),
+            netPay: netPay,
+            status: 'paid',
+            paidAt: new Date().toISOString(),
+            paidBy: ctx.user.name,
+          };
+
+          var updatedDb = await DB.cairkanGaji(record, recExp);
+
+          document.getElementById('payout-modal').classList.add('hidden');
+          renderPayroll();
+          window.ThermalPrinter.openPayrollModal(record, updatedDb.settings);
+        });
+
+        // Capster modal
+        document.getElementById('btn-add-capster').addEventListener('click', function () {
+          document.getElementById('capster-modal').classList.remove('hidden');
+        });
+        document.getElementById('close-cap-modal').addEventListener('click', function () {
+          document.getElementById('capster-modal').classList.add('hidden');
+        });
+        document.getElementById('cancel-cap-modal').addEventListener('click', function () {
+          document.getElementById('capster-modal').classList.add('hidden');
+        });
+        document.getElementById('cap-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var curDb = await DB.loadState();
+          var split = FE.getSplitConfig(curDb.settings);
+          var cap = {
+            id: DB.generateId('cap'),
+            name: document.getElementById('cap-name').value.trim(),
+            phone: document.getElementById('cap-phone').value.trim() || '-',
+            specialty: document.getElementById('cap-spec').value.trim() || 'All-Round Haircut',
+            defaultSharePct: split.capsterPct,
+            baseAllowance: Math.max(0, Number(document.getElementById('cap-allow').value) || 0),
+            active: true,
+            joinedAt: FE.todayYmd(),
+          };
+          await DB.simpanCapster(cap);
+          document.getElementById('cap-form').reset();
+          document.getElementById('capster-modal').classList.add('hidden');
+          renderPayroll();
+        });
+
+        renderPayroll();
+      })();
+    </script>
+  </body>
+</html>
