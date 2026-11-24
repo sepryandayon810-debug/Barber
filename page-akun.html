@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Kelola Akun — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Manajemen Akun &amp; Hak Akses</h1>
+              <p class="page-subtitle" id="akun-subtitle">
+                Buat akun pengguna baru, atur jabatan (Developer, Owner, Admin, Kasir), reset password/PIN, dan kontrol status aktif akun.
+              </p>
+            </div>
+            <div class="header-actions">
+              <div class="segmented" id="role-filter-tabs">
+                <button type="button" data-role="all" class="active">Semua</button>
+                <button type="button" data-role="developer">Developer</button>
+                <button type="button" data-role="owner">Owner</button>
+                <button type="button" data-role="admin">Admin</button>
+                <button type="button" data-role="kasir">Kasir</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ringkasan Akun -->
+          <section class="grid-4" id="akun-kpi-strip"></section>
+
+          <!-- Layout 2 Kolom: Form Buat/Edit Akun + Daftar Akun -->
+          <section class="grid-12">
+            <!-- KIRI: Form Pembuatan & Edit Akun -->
+            <form id="akun-form" class="panel panel-pad col-4" style="display:flex;flex-direction:column;gap:14px;align-self:start;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <div>
+                  <h2 class="panel-title" id="akun-form-title">Buat Akun Baru</h2>
+                  <p class="panel-sub" id="akun-form-sub">Langsung siap dipakai login di semua perangkat</p>
+                </div>
+                <button type="button" id="btn-reset-form" class="btn btn-outline btn-sm hidden">Batal Edit</button>
+              </div>
+
+              <input type="hidden" id="f-id" />
+
+              <div class="form-group">
+                <label class="form-label" for="f-name">Nama Lengkap</label>
+                <input type="text" id="f-name" class="input" placeholder="Contoh: Andi Kasir Shift Malam" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="f-username">Username Login</label>
+                <input
+                  type="text"
+                  id="f-username"
+                  class="input mono"
+                  placeholder="contoh: kasir2 (tanpa spasi)"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="f-role">Role / Jabatan</label>
+                <select id="f-role" class="select"></select>
+                <p class="fs-11 text-muted" id="f-role-hint" style="margin-top:2px;"></p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="f-password" id="f-pass-label">Password / PIN</label>
+                <div style="position:relative;">
+                  <input
+                    type="password"
+                    id="f-password"
+                    class="input"
+                    style="padding-right:64px;"
+                    minlength="4"
+                    placeholder="Minimal 4 karakter"
+                    autocomplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    id="f-toggle-pass"
+                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;"
+                  >
+                    Lihat
+                  </button>
+                </div>
+              </div>
+
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;">
+                <input type="checkbox" id="f-active" checked />
+                Akun aktif (diizinkan masuk ke aplikasi)
+              </label>
+
+              <div id="akun-feedback" class="notice hidden"></div>
+
+              <button type="submit" id="btn-submit-akun" class="btn btn-primary" style="width:100%;">
+                Simpan &amp; Buat Akun
+              </button>
+            </form>
+
+            <!-- KANAN: Tabel Daftar Akun -->
+            <div class="panel col-8">
+              <div class="panel-header">
+                <div>
+                  <h2 class="panel-title">Daftar Akun Terdaftar</h2>
+                  <p class="panel-sub" id="akun-count-label">0 akun</p>
+                </div>
+                <input
+                  type="text"
+                  id="akun-search"
+                  class="input input-sm"
+                  style="max-width:250px;"
+                  placeholder="Cari nama atau username..."
+                />
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nama &amp; Username</th>
+                      <th>Jabatan</th>
+                      <th>Status</th>
+                      <th class="text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="akun-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Matriks Hak Akses 4 Role -->
+          <section class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">Ringkasan Pembatasan Hak Akses 4 Role</h2>
+            </div>
+            <div class="grid-4 panel-pad" id="akun-role-matrix"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('akun', 'Kelola Akun');
+        if (!ctx) return;
+
+        var DB = window.BarberDB;
+        var RBAC = window.AuthRBAC;
+        var FE = window.FinanceEngine;
+
+        var roleFilter = 'all';
+        var allowedRoles = ctx.user.role === 'developer'
+          ? ['developer', 'owner', 'admin', 'kasir']
+          : ['admin', 'kasir'];
+
+        document.getElementById('akun-subtitle').textContent =
+          ctx.user.role === 'developer'
+            ? 'Mode Developer: Anda dapat membuat, mengubah, menonaktifkan, dan menghapus seluruh akun (Developer, Owner, Admin, Kasir).'
+            : 'Mode Owner: Anda dapat membuat, mengubah, menonaktifkan, dan menghapus akun Admin serta Kasir.';
+
+        var roleSelect = document.getElementById('f-role');
+        roleSelect.innerHTML = allowedRoles.map(function (r) {
+          return '<option value="' + r + '">' + RBAC.ROLE_LABELS[r] + '</option>';
+        }).join('');
+        roleSelect.value = allowedRoles.indexOf('kasir') >= 0 ? 'kasir' : allowedRoles[0];
+
+        function updateRoleHint() {
+          var r = roleSelect.value;
+          document.getElementById('f-role-hint').textContent = RBAC.ROLE_DESCRIPTIONS[r] || '';
+        }
+        roleSelect.addEventListener('change', updateRoleHint);
+        updateRoleHint();
+
+        var passInput = document.getElementById('f-password');
+        var togglePassBtn = document.getElementById('f-toggle-pass');
+        togglePassBtn.addEventListener('click', function () {
+          var hide = passInput.type === 'password';
+          passInput.type = hide ? 'text' : 'password';
+          togglePassBtn.textContent = hide ? 'Tutup' : 'Lihat';
+        });
+
+        function showFeedback(type, msg) {
+          var el = document.getElementById('akun-feedback');
+          el.className = 'notice ' + type;
+          el.textContent = msg;
+        }
+
+        function resetForm() {
+          document.getElementById('f-id').value = '';
+          document.getElementById('f-name').value = '';
+          document.getElementById('f-username').value = '';
+          roleSelect.value = allowedRoles.indexOf('kasir') >= 0 ? 'kasir' : allowedRoles[0];
+          passInput.value = '';
+          passInput.required = true;
+          passInput.placeholder = 'Minimal 4 karakter';
+          document.getElementById('f-pass-label').textContent = 'Password / PIN';
+          document.getElementById('f-active').checked = true;
+          document.getElementById('akun-form-title').textContent = 'Buat Akun Baru';
+          document.getElementById('akun-form-sub').textContent = 'Langsung siap dipakai login di semua perangkat';
+          document.getElementById('btn-submit-akun').textContent = 'Simpan & Buat Akun';
+          document.getElementById('btn-reset-form').classList.add('hidden');
+          updateRoleHint();
+        }
+
+        function startEdit(u) {
+          document.getElementById('f-id').value = u.id;
+          document.getElementById('f-name').value = u.name;
+          document.getElementById('f-username').value = u.username;
+          if (allowedRoles.indexOf(u.role) >= 0) roleSelect.value = u.role;
+          passInput.value = '';
+          passInput.required = false;
+          passInput.placeholder = 'Kosongkan jika tidak ganti password';
+          document.getElementById('f-pass-label').textContent = 'Password / PIN Baru (Opsional)';
+          document.getElementById('f-active').checked = Boolean(u.active);
+          document.getElementById('akun-form-title').textContent = 'Edit Akun: ' + u.name;
+          document.getElementById('akun-form-sub').textContent = 'Ubah nama, jabatan, status aktif, atau reset password';
+          document.getElementById('btn-submit-akun').textContent = 'Simpan Perubahan Akun';
+          document.getElementById('btn-reset-form').classList.remove('hidden');
+          document.getElementById('akun-feedback').className = 'notice hidden';
+          updateRoleHint();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.getElementById('btn-reset-form').addEventListener('click', function () {
+          resetForm();
+          document.getElementById('akun-feedback').className = 'notice hidden';
+        });
+
+        async function renderUsers() {
+          var db = await DB.loadState();
+          var users = db.users || [];
+          var q = document.getElementById('akun-search').value.trim().toLowerCase();
+
+          var activeCount = users.filter(function (u) { return u.active; }).length;
+          var opsCount = users.filter(function (u) { return u.role === 'admin' || u.role === 'kasir'; }).length;
+          var mgmtCount = users.filter(function (u) { return u.role === 'owner' || u.role === 'developer'; }).length;
+
+          document.getElementById('akun-kpi-strip').innerHTML =
+            '<div class="kpi-card"><div class="kpi-label">Total Akun</div><div class="kpi-value">' + users.length + '</div><div class="kpi-meta">Tersimpan &amp; siap sync</div></div>' +
+            '<div class="kpi-card"><div class="kpi-label">Akun Aktif</div><div class="kpi-value text-green">' + activeCount + '</div><div class="kpi-meta">' + (users.length - activeCount) + ' nonaktif</div></div>' +
+            '<div class="kpi-card"><div class="kpi-label">Admin &amp; Kasir</div><div class="kpi-value">' + opsCount + '</div><div class="kpi-meta">Operasional harian</div></div>' +
+            '<div class="kpi-card"><div class="kpi-label">Owner &amp; Developer</div><div class="kpi-value text-brass">' + mgmtCount + '</div><div class="kpi-meta">Manajemen &amp; kontrol penuh</div></div>';
+
+          var filtered = users.filter(function (u) {
+            if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+            if (!q) return true;
+            return u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
+          });
+
+          document.getElementById('akun-count-label').textContent = filtered.length + ' dari ' + users.length + ' akun ditampilkan';
+
+          var tbody = document.getElementById('akun-tbody');
+          tbody.innerHTML = filtered.length
+            ? filtered.map(function (u) {
+                var isSelf = u.id === ctx.user.id;
+                var canManage = !isSelf && ctx.perms.canManageRoleTarget(u.role);
+                return (
+                  '<tr>' +
+                    '<td>' +
+                      '<div class="fw-600">' + u.name + (isSelf ? ' <span class="fs-11 text-green">(Anda)</span>' : '') + '</div>' +
+                      '<div class="mono fs-11 text-muted">@' + u.username + (u.createdAt ? ' · Dibuat ' + FE.formatDateShort(u.createdAt) : '') + '</div>' +
+                    '</td>' +
+                    '<td class="nowrap fs-xs fw-600">' + (RBAC.ROLE_LABELS[u.role] || u.role) + '</td>' +
+                    '<td class="nowrap fs-xs fw-600 ' + (u.active ? 'text-emerald' : 'text-red') + '">' + (u.active ? 'Aktif' : 'Nonaktif') + '</td>' +
+                    '<td class="text-right nowrap">' +
+                      (canManage
+                        ? '<button type="button" class="btn btn-outline btn-sm" data-edit="' + u.id + '">Edit</button> ' +
+                          '<button type="button" class="btn btn-outline btn-sm" data-toggle="' + u.id + '">' + (u.active ? 'Nonaktifkan' : 'Aktifkan') + '</button> ' +
+                          '<button type="button" class="btn btn-danger-outline btn-sm" data-del="' + u.id + '">Hapus</button>'
+                        : '<span class="fs-xs text-muted">Terkunci</span>') +
+                    '</td>' +
+                  '</tr>'
+                );
+              }).join('')
+            : '<tr><td colspan="4" class="text-center fs-xs text-muted" style="padding:28px;">Tidak ada akun yang cocok dengan filter.</td></tr>';
+
+          tbody.querySelectorAll('[data-edit]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var target = users.find(function (x) { return x.id === btn.getAttribute('data-edit'); });
+              if (target) startEdit(target);
+            });
+          });
+
+          tbody.querySelectorAll('[data-toggle]').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+              await DB.toggleUserActive(btn.getAttribute('data-toggle'));
+              renderUsers();
+            });
+          });
+
+          tbody.querySelectorAll('[data-del]').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+              var id = btn.getAttribute('data-del');
+              await DB.hapusUser(id);
+              if (document.getElementById('f-id').value === id) resetForm();
+              renderUsers();
+            });
+          });
+
+          document.getElementById('akun-role-matrix').innerHTML = ['developer', 'owner', 'admin', 'kasir'].map(function (r) {
+            return (
+              '<div class="panel panel-pad" style="background:#F8FAFC;">' +
+                '<div class="fw-700" style="margin-bottom:6px;">' + RBAC.ROLE_LABELS[r] + '</div>' +
+                '<p class="fs-xs text-secondary">' + RBAC.ROLE_DESCRIPTIONS[r] + '</p>' +
+              '</div>'
+            );
+          }).join('');
+        }
+
+        document.getElementById('akun-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var existingId = document.getElementById('f-id').value;
+          var name = document.getElementById('f-name').value.trim();
+          var username = document.getElementById('f-username').value.trim().toLowerCase().replace(/\s+/g, '');
+          var role = roleSelect.value;
+          var rawPass = passInput.value;
+          var active = document.getElementById('f-active').checked;
+
+          if (!ctx.perms.canManageRoleTarget(role)) {
+            showFeedback('error', 'Anda tidak memiliki izin untuk membuat atau mengubah role ' + role + '.');
+            return;
+          }
+          if (!existingId && rawPass.length < 4) {
+            showFeedback('error', 'Password / PIN minimal 4 karakter.');
+            return;
+          }
+          if (existingId && rawPass && rawPass.length < 4) {
+            showFeedback('error', 'Password / PIN baru minimal 4 karakter.');
+            return;
+          }
+
+          try {
+            var payload = {
+              id: existingId || DB.generateId('usr'),
+              name: name,
+              username: username,
+              role: role,
+              active: active,
+            };
+
+            if (!existingId) {
+              payload.createdAt = new Date().toISOString();
+            }
+
+            if (rawPass) {
+              var salt = 's_' + Math.random().toString(36).slice(2, 8);
+              payload.salt = salt;
+              payload.passHash = await RBAC.hashPassword(rawPass, salt);
+            }
+
+            await DB.simpanUser(payload);
+            showFeedback(
+              'success',
+              existingId
+                ? 'Akun "' + name + '" (@' + username + ') berhasil diperbarui.'
+                : 'Akun baru "' + name + '" (@' + username + ') berhasil dibuat dan siap digunakan login.'
+            );
+            resetForm();
+            renderUsers();
+          } catch (err) {
+            showFeedback('error', err && err.message ? err.message : 'Gagal menyimpan akun.');
+          }
+        });
+
+        document.querySelectorAll('#role-filter-tabs button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('#role-filter-tabs button').forEach(function (x) { x.classList.remove('active'); });
+            btn.classList.add('active');
+            roleFilter = btn.getAttribute('data-role');
+            renderUsers();
+          });
+        });
+
+        document.getElementById('akun-search').addEventListener('input', renderUsers);
+        renderUsers();
+      })();
+    </script>
+  </body>
+</html>
