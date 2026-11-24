@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Produk &amp; Stok Barang — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Produk Grooming &amp; Stok Barang</h1>
+              <p class="page-subtitle">
+                Kelola pomade, hair tonic, minuman, dan kode barcode EAN-13 untuk scan cepat di kasir POS.
+              </p>
+            </div>
+            <div class="header-actions">
+              <button type="button" id="btn-add-prod" class="btn btn-primary hidden">Tambah Produk</button>
+            </div>
+          </div>
+
+          <!-- Ringkasan Stok Editorial -->
+          <section class="panel inv-banner">
+            <img
+              src="./assets/images/barber_grooming_products.jpg"
+              alt="Produk Grooming Barbershop"
+              referrerpolicy="no-referrer"
+              onerror="this.style.display='none'"
+            />
+            <div class="grid-3 panel-pad" id="inv-summary" style="align-items:center;"></div>
+          </section>
+
+          <div class="panel">
+            <div class="panel-header">
+              <input type="text" id="prod-search" class="input input-sm" style="max-width:280px;" placeholder="Cari nama produk atau kode barcode..." />
+              <span class="fs-xs text-muted" id="prod-count">0 produk</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Produk &amp; Barcode</th>
+                    <th class="text-right" id="th-prod-cost">Harga Modal (HPP)</th>
+                    <th class="text-right">Harga Jual</th>
+                    <th class="text-right">Komisi Capster</th>
+                    <th class="text-right">Stok</th>
+                    <th class="text-right" id="th-prod-action">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="products-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal Tambah/Edit Produk -->
+    <div id="prod-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title" id="prod-modal-title">Tambah Produk</h3>
+          <button type="button" class="btn-icon" id="close-prod-modal">✕</button>
+        </div>
+        <form id="prod-form">
+          <div class="modal-body">
+            <input type="hidden" id="prod-id" />
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="prod-barcode">Kode Barcode</label>
+                <input type="text" id="prod-barcode" class="input mono" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="prod-cat">Kategori</label>
+                <select id="prod-cat" class="select">
+                  <option value="Styling">Styling</option>
+                  <option value="Perawatan">Perawatan</option>
+                  <option value="Minuman">Minuman</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="prod-name">Nama Produk</label>
+              <input type="text" id="prod-name" class="input" placeholder="Contoh: Matte Clay Pomade 100g" required />
+            </div>
+            <div class="grid-2">
+              <div class="form-group" id="prod-cost-group">
+                <label class="form-label" for="prod-cost">Harga Modal / HPP (Rp)</label>
+                <input type="number" id="prod-cost" class="input mono" min="0" step="500" value="35000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="prod-sell">Harga Jual (Rp)</label>
+                <input type="number" id="prod-sell" class="input mono" min="0" step="500" value="75000" required />
+              </div>
+            </div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label" for="prod-stock">Stok</label>
+                <input type="number" id="prod-stock" class="input mono" min="0" value="10" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="prod-min">Stok Min</label>
+                <input type="number" id="prod-min" class="input mono" min="0" value="5" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="prod-comm">Komisi (%)</label>
+                <input type="number" id="prod-comm" class="input mono" min="0" max="50" value="0" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-prod-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Produk</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('produk', 'Produk & Stok');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var canEdit = ctx.perms.canEditProducts;
+        var canCost = ctx.perms.canViewCostAndProfit;
+
+        if (canEdit) document.getElementById('btn-add-prod').classList.remove('hidden');
+        else document.getElementById('th-prod-action').classList.add('hidden');
+
+        if (!canCost) {
+          document.getElementById('th-prod-cost').classList.add('hidden');
+          document.getElementById('prod-cost-group').classList.add('hidden');
+        }
+
+        async function renderProducts() {
+          var db = await DB.loadState();
+          var q = document.getElementById('prod-search').value.trim().toLowerCase();
+          var filtered = db.products.filter(function (p) {
+            return !q || p.name.toLowerCase().includes(q) || p.barcode.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
+          });
+
+          var totalUnits = db.products.reduce(function (s, p) { return s + p.stock; }, 0);
+          var lowCount = db.products.filter(function (p) { return p.stock <= p.minStock; }).length;
+          var totalVal = db.products.reduce(function (s, p) { return s + p.stock * (canCost ? p.costPrice : p.sellPrice); }, 0);
+
+          document.getElementById('inv-summary').innerHTML =
+            '<div><div class="fs-xs text-muted">Total SKU Aktif</div><div class="mono fw-700" style="font-size:24px;margin-top:4px;">' + db.products.length + '</div><div class="fs-11 text-muted">Siap scan barcode</div></div>' +
+            '<div><div class="fs-xs text-muted">Stok Menipis</div><div class="mono fw-700 text-brass" style="font-size:24px;margin-top:4px;">' + lowCount + '</div><div class="fs-11 text-muted">Perlu segera restok</div></div>' +
+            '<div><div class="fs-xs text-muted">' + (canCost ? 'Nilai Modal Stok (HPP)' : 'Nilai Jual Stok') + '</div><div class="mono fw-700 text-green" style="font-size:20px;margin-top:4px;">' + FE.formatRupiah(totalVal) + '</div><div class="fs-11 text-muted">Total ' + totalUnits + ' unit</div></div>';
+
+          document.getElementById('prod-count').textContent = filtered.length + ' produk ditampilkan';
+
+          var tbody = document.getElementById('products-tbody');
+          tbody.innerHTML = filtered.map(function (p) {
+            var isLow = p.stock <= p.minStock;
+            return (
+              '<tr>' +
+                '<td><div class="fw-600">' + p.name + '</div><div class="mono fs-11 text-muted">' + p.barcode + ' · ' + p.category + '</div></td>' +
+                (canCost ? '<td class="text-right nowrap mono fs-xs text-secondary">' + FE.formatRupiah(p.costPrice) + '</td>' : '') +
+                '<td class="text-right nowrap mono fw-600">' + FE.formatRupiah(p.sellPrice) + '</td>' +
+                '<td class="text-right nowrap mono fs-xs text-secondary">' + (p.capsterCommissionPct > 0 ? p.capsterCommissionPct + '%' : '—') + '</td>' +
+                '<td class="text-right nowrap mono fs-xs fw-700 ' + (isLow ? 'text-red' : '') + '">' + p.stock + ' unit' + (isLow ? ' (Tipis)' : '') + '</td>' +
+                (canEdit
+                  ? '<td class="text-right nowrap">' +
+                      '<button type="button" class="btn btn-outline btn-sm" data-restock="' + p.id + '">+5</button> ' +
+                      '<button type="button" class="btn btn-outline btn-sm" data-edit="' + p.id + '">Ubah</button> ' +
+                      '<button type="button" class="btn btn-danger-outline btn-sm" data-del="' + p.id + '">Hapus</button>' +
+                    '</td>'
+                  : '') +
+              '</tr>'
+            );
+          }).join('');
+
+          if (canEdit) {
+            tbody.querySelectorAll('[data-restock]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var id = b.getAttribute('data-restock');
+                await DB.restokProduk(id, 5);
+                renderProducts();
+              });
+            });
+            tbody.querySelectorAll('[data-edit]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var st = await DB.loadState();
+                var item = st.products.find(function (x) { return x.id === b.getAttribute('data-edit'); });
+                if (item) openModal(item);
+              });
+            });
+            tbody.querySelectorAll('[data-del]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var id = b.getAttribute('data-del');
+                await DB.hapusProduk(id);
+                renderProducts();
+              });
+            });
+          }
+        }
+
+        function openModal(item) {
+          document.getElementById('prod-modal-title').textContent = item ? 'Ubah Produk' : 'Tambah Produk Baru';
+          document.getElementById('prod-id').value = item ? item.id : '';
+          document.getElementById('prod-barcode').value = item ? item.barcode : '8991001' + Math.floor(100000 + Math.random() * 899999);
+          document.getElementById('prod-name').value = item ? item.name : '';
+          document.getElementById('prod-cat').value = item ? item.category : 'Styling';
+          document.getElementById('prod-cost').value = item ? item.costPrice : 35000;
+          document.getElementById('prod-sell').value = item ? item.sellPrice : 75000;
+          document.getElementById('prod-stock').value = item ? item.stock : 10;
+          document.getElementById('prod-min').value = item ? item.minStock : 5;
+          document.getElementById('prod-comm').value = item ? item.capsterCommissionPct : 0;
+          document.getElementById('prod-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+          document.getElementById('prod-modal').classList.add('hidden');
+        }
+
+        document.getElementById('prod-search').addEventListener('input', renderProducts);
+        document.getElementById('btn-add-prod').addEventListener('click', function () { openModal(null); });
+        document.getElementById('close-prod-modal').addEventListener('click', closeModal);
+        document.getElementById('cancel-prod-modal').addEventListener('click', closeModal);
+
+        document.getElementById('prod-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var existingId = document.getElementById('prod-id').value;
+          var curState = await DB.loadState();
+          var oldProd = curState.products.find(function (x) { return x.id === existingId; });
+          var payload = {
+            id: existingId || DB.generateId('prd'),
+            barcode: document.getElementById('prod-barcode').value.trim(),
+            name: document.getElementById('prod-name').value.trim(),
+            category: document.getElementById('prod-cat').value,
+            costPrice: canCost ? Math.max(0, Number(document.getElementById('prod-cost').value) || 0) : (oldProd ? oldProd.costPrice : 0),
+            sellPrice: Math.max(0, Number(document.getElementById('prod-sell').value) || 0),
+            stock: Math.max(0, Number(document.getElementById('prod-stock').value) || 0),
+            minStock: Math.max(0, Number(document.getElementById('prod-min').value) || 5),
+            capsterCommissionPct: Math.max(0, Math.min(50, Number(document.getElementById('prod-comm').value) || 0)),
+            active: true,
+            updatedAt: new Date().toISOString(),
+          };
+          await DB.simpanProduk(payload);
+          closeModal();
+          renderProducts();
+        });
+
+        renderProducts();
+      })();
+    </script>
+  </body>
+</html>
