@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Ringkasan Operasional</h1>
+              <p class="page-subtitle" id="dash-subtitle">
+                Perhitungan terpusat bagi hasil 40% Capster / 60% Toko
+              </p>
+            </div>
+            <div class="header-actions">
+              <div class="segmented" id="range-tabs">
+                <button type="button" data-range="today">Hari Ini</button>
+                <button type="button" data-range="7d" class="active">7 Hari</button>
+                <button type="button" data-range="30d">30 Hari</button>
+              </div>
+              <a href="./page-kasir.html" class="btn btn-primary">Buka Kasir POS</a>
+            </div>
+          </div>
+
+          <!-- KPI 4 Kolom -->
+          <section class="grid-4" id="kpi-strip"></section>
+
+          <!-- Grafik Harian + Peringkat Capster -->
+          <section class="grid-12">
+            <div class="panel panel-pad col-7">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+                <div>
+                  <h2 class="panel-title">Pembagian Pendapatan Harian</h2>
+                  <p class="panel-sub" id="dash-chart-sub">Bagian Toko (Jasa + Produk) vs Hak Komisi Capster</p>
+                </div>
+                <div class="fs-xs text-secondary" style="display:flex;gap:14px;">
+                  <span><strong class="text-green">■</strong> Toko</span>
+                  <span><strong class="text-brass">■</strong> Capster</span>
+                </div>
+              </div>
+              <div class="bar-chart" id="daily-bar-chart"></div>
+            </div>
+
+            <div class="panel panel-pad col-5" style="display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                  <div>
+                    <h2 class="panel-title">Performa &amp; Hak Capster</h2>
+                    <p class="panel-sub">Akumulasi komisi bagi hasil periode aktif</p>
+                  </div>
+                  <a href="./page-gaji.html" class="fs-xs fw-600 text-green">Kelola Gaji</a>
+                </div>
+                <div id="capster-rank-list"></div>
+              </div>
+
+              <div class="grid-3" id="payment-channel-strip" style="border-top:1px solid var(--border-subtle);padding-top:14px;"></div>
+            </div>
+          </section>
+
+          <!-- Transaksi Terakhir + Stok Menipis -->
+          <section class="grid-12">
+            <div class="panel col-8">
+              <div class="panel-header">
+                <h2 class="panel-title">Transaksi Terakhir</h2>
+                <a href="./page-transaksi.html" class="fs-xs fw-600 text-green">Lihat Semua</a>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice / Waktu</th>
+                      <th>Pelanggan &amp; Item</th>
+                      <th class="text-right">Hak Capster</th>
+                      <th class="text-right">Total Bayar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-trx-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel col-4">
+              <div class="panel-header">
+                <h2 class="panel-title">Stok Menipis</h2>
+                <a href="./page-produk.html" class="fs-xs fw-600 text-green">Kelola Stok</a>
+              </div>
+              <div class="panel-pad" id="low-stock-list"></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('dashboard', 'Dashboard');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var currentRange = '7d';
+
+        async function renderDashboard() {
+          var db = await window.BarberDB.loadState();
+          var endYmd = FE.todayYmd();
+          var startYmd = currentRange === 'today' ? endYmd : currentRange === '30d' ? FE.daysAgoYmd(29) : FE.daysAgoYmd(6);
+          var rangeLabel = currentRange === 'today' ? 'Hari Ini' : currentRange === '30d' ? '30 Hari Terakhir' : '7 Hari Terakhir';
+
+          var split = FE.getSplitConfig(db.settings);
+          document.getElementById('dash-subtitle').textContent =
+            'Perhitungan terpusat bagi hasil ' + split.label + ' · ' + rangeLabel;
+          var chartSub = document.getElementById('dash-chart-sub');
+          if (chartSub) {
+            chartSub.textContent = 'Bagian Toko (' + split.shopPct + '% Jasa + Produk) vs Hak Komisi Capster (' + split.capsterPct + '%)';
+          }
+
+          var ledger = FE.calculateLedger(db, startYmd, endYmd);
+          var canProfit = ctx.perms.canViewCostAndProfit;
+
+          // 1. Render KPI Strip
+          var fourthCard = canProfit
+            ? '<div class="kpi-card">' +
+                '<div class="kpi-label"><span>Estimasi Laba Bersih Toko</span></div>' +
+                '<div class="kpi-value ' + (ledger.netShopProfit >= 0 ? '' : 'text-red') + '">' + FE.formatRupiah(ledger.netShopProfit) + '</div>' +
+                '<div class="kpi-meta">Setelah HPP ' + FE.formatRupiah(ledger.totalProductCost) + ' &amp; beban ' + FE.formatRupiah(ledger.operationalExpenses) + '</div>' +
+              '</div>'
+            : '<div class="kpi-card">' +
+                '<div class="kpi-label"><span>Kas Masuk Tunai</span></div>' +
+                '<div class="kpi-value">' + FE.formatRupiah(ledger.cashInTunai) + '</div>' +
+                '<div class="kpi-meta">QRIS ' + FE.formatRupiah(ledger.cashInQris) + ' · Transfer ' + FE.formatRupiah(ledger.cashInTransfer) + '</div>' +
+              '</div>';
+
+          document.getElementById('kpi-strip').innerHTML =
+            '<div class="kpi-card">' +
+              '<div class="kpi-label"><span>Total Omzet Kotor</span></div>' +
+              '<div class="kpi-value">' + FE.formatRupiah(ledger.grossRevenue) + '</div>' +
+              '<div class="kpi-meta">' + ledger.transactionCount + ' transaksi · ' + ledger.serviceUnitsCount + ' jasa · ' + ledger.productUnitsCount + ' barang</div>' +
+            '</div>' +
+            '<div class="kpi-card">' +
+              '<div class="kpi-label"><span>Bagian Toko (' + split.shopPct + '% Jasa + Produk)</span></div>' +
+              '<div class="kpi-value text-green">' + FE.formatRupiah(ledger.shopGrossIncome) + '</div>' +
+              '<div class="kpi-meta">Jasa ' + split.shopPct + '%: ' + FE.formatRupiah(ledger.totalShopServiceShare) + ' · Barang: ' + FE.formatRupiah(ledger.totalProductSales) + '</div>' +
+            '</div>' +
+            '<div class="kpi-card">' +
+              '<div class="kpi-label"><span>Hak Komisi Capster (' + split.capsterPct + '%)</span></div>' +
+              '<div class="kpi-value text-brass">' + FE.formatRupiah(ledger.totalCapsterShare) + '</div>' +
+              '<div class="kpi-meta">Jasa: ' + FE.formatRupiah(ledger.totalCapsterServiceShare) + ' · Produk: ' + FE.formatRupiah(ledger.totalCapsterProductShare) + '</div>' +
+            '</div>' +
+            fourthCard;
+
+          // 2. Daily Bar Chart
+          var series = FE.buildDailySeries(db, currentRange === '30d' ? 10 : 7);
+          var maxVal = Math.max(
+            50000,
+            ...series.map(function (p) { return Math.max(p.bagianToko, p.hakCapster); })
+          );
+          document.getElementById('daily-bar-chart').innerHTML = series
+            .map(function (pt) {
+              var hShop = Math.round((pt.bagianToko / maxVal) * 100);
+              var hCap = Math.round((pt.hakCapster / maxVal) * 100);
+              return (
+                '<div class="bar-col" title="' + pt.label + ' — Toko: ' + FE.formatRupiah(pt.bagianToko) + ' | Capster: ' + FE.formatRupiah(pt.hakCapster) + '">' +
+                  '<div class="bar-pair">' +
+                    '<div class="bar-rect shop" style="height:' + Math.max(3, hShop) + '%;"></div>' +
+                    '<div class="bar-rect capster" style="height:' + Math.max(3, hCap) + '%;"></div>' +
+                  '</div>' +
+                  '<span class="bar-label">' + pt.label + '</span>' +
+                '</div>'
+              );
+            })
+            .join('');
+
+          // 3. Capster Rank
+          var capRows = FE.calculateCapsterPayroll(db, startYmd, endYmd).sort(function (a, b) {
+            return b.grossServiceRevenue - a.grossServiceRevenue;
+          });
+          document.getElementById('capster-rank-list').innerHTML = capRows.length
+            ? capRows
+                .map(function (r) {
+                  return (
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-subtle);">' +
+                      '<div style="min-width:0;padding-right:10px;">' +
+                        '<div class="fw-600 truncate">' + r.capster.name + '</div>' +
+                        '<div class="fs-xs text-muted">' + r.serviceCount + ' potong · Omzet ' + FE.formatRupiah(r.grossServiceRevenue) + '</div>' +
+                      '</div>' +
+                      '<div class="text-right nowrap">' +
+                        '<div class="mono fw-600 text-brass">' + FE.formatRupiah(r.totalEarnedCommission) + '</div>' +
+                        '<div class="fs-11 text-muted">Toko ' + FE.formatRupiah(r.shopServiceContribution) + '</div>' +
+                      '</div>' +
+                    '</div>'
+                  );
+                })
+                .join('')
+            : '<p class="fs-xs text-muted text-center" style="padding:20px 0;">Belum ada data capster.</p>';
+
+          // 4. Payment channels
+          document.getElementById('payment-channel-strip').innerHTML =
+            '<div><div class="fs-11 text-muted">Tunai</div><div class="mono fw-600 fs-xs" style="margin-top:3px;">' + FE.formatRupiah(ledger.cashInTunai) + '</div></div>' +
+            '<div><div class="fs-11 text-muted">QRIS</div><div class="mono fw-600 fs-xs" style="margin-top:3px;">' + FE.formatRupiah(ledger.cashInQris) + '</div></div>' +
+            '<div><div class="fs-11 text-muted">Transfer</div><div class="mono fw-600 fs-xs" style="margin-top:3px;">' + FE.formatRupiah(ledger.cashInTransfer) + '</div></div>';
+
+          // 5. Recent transactions
+          var recent = (db.transactions || []).filter(function (t) { return t.status === 'completed'; }).slice(0, 6);
+          document.getElementById('recent-trx-body').innerHTML = recent.length
+            ? recent
+                .map(function (t) {
+                  var itemSummary = (t.items || [])
+                    .map(function (i) { return i.name + (i.capsterName ? ' (' + i.capsterName + ')' : ''); })
+                    .join(', ');
+                  return (
+                    '<tr>' +
+                      '<td class="nowrap"><div class="mono fs-xs fw-600">' + t.invoiceNo + '</div><div class="fs-11 text-muted">' + FE.formatDateTime(t.createdAt) + '</div></td>' +
+                      '<td><div class="fs-xs fw-600">' + (t.customerName || 'Walk-in') + ' · ' + String(t.paymentMethod).toUpperCase() + '</div><div class="fs-11 text-muted truncate" style="max-width:260px;">' + itemSummary + '</div></td>' +
+                      '<td class="text-right nowrap mono fs-xs text-brass">' + FE.formatRupiah(t.totalCapsterShare) + '</td>' +
+                      '<td class="text-right nowrap mono fs-xs fw-700">' + FE.formatRupiah(t.total) + '</td>' +
+                    '</tr>'
+                  );
+                })
+                .join('')
+            : '<tr><td colspan="4" class="text-center fs-xs text-muted" style="padding:28px;">Belum ada transaksi.</td></tr>';
+
+          // 6. Low stock
+          var low = (db.products || []).filter(function (p) { return p.active && p.stock <= p.minStock; });
+          document.getElementById('low-stock-list').innerHTML = low.length
+            ? low
+                .map(function (p) {
+                  return (
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-subtle);">' +
+                      '<div style="min-width:0;padding-right:10px;">' +
+                        '<div class="fw-600 fs-xs truncate">' + p.name + '</div>' +
+                        '<div class="mono fs-11 text-muted">' + p.barcode + ' · Min ' + p.minStock + '</div>' +
+                      '</div>' +
+                      '<span class="mono fs-xs fw-700 text-red nowrap">Sisa ' + p.stock + '</span>' +
+                    '</div>'
+                  );
+                })
+                .join('')
+            : '<p class="fs-xs text-muted text-center" style="padding:20px 0;">Semua stok produk grooming aman.</p>';
+        }
+
+        document.querySelectorAll('#range-tabs button').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('#range-tabs button').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentRange = btn.getAttribute('data-range');
+            renderDashboard();
+          });
+        });
+
+        renderDashboard();
+      })();
+    </script>
+  </body>
+</html>
