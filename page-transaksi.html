@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transaksi &amp; Kas — BarberDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="./js/perhitungan.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/database.js"></script>
+    <script src="./js/printer.js"></script>
+    <script src="./js/sidebar.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="app-sidebar"></div>
+      <div class="app-main">
+        <div id="app-topbar"></div>
+
+        <main class="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title" id="trx-page-title">Riwayat Transaksi &amp; Kas Keluar</h1>
+              <p class="page-subtitle" id="trx-page-sub">
+                Cetak ulang struk pelanggan, pembatalan transaksi (void), dan pencatatan pengeluaran operasional toko.
+              </p>
+            </div>
+            <div class="header-actions">
+              <div class="segmented hidden" id="trx-exp-tabs">
+                <button type="button" data-tab="trx" class="active">Transaksi</button>
+                <button type="button" data-tab="exp">Pengeluaran Kas</button>
+              </div>
+              <button type="button" id="btn-add-exp" class="btn btn-primary hidden">Catat Pengeluaran</button>
+            </div>
+          </div>
+
+          <!-- Panel Transaksi -->
+          <section class="panel" id="panel-trx">
+            <div class="panel-header">
+              <input type="text" id="trx-search" class="input input-sm" style="max-width:280px;" placeholder="Cari invoice, pelanggan, capster..." />
+              <div class="segmented" id="method-filter">
+                <button type="button" data-method="all" class="active">Semua</button>
+                <button type="button" data-method="tunai">Tunai</button>
+                <button type="button" data-method="qris">QRIS</button>
+                <button type="button" data-method="transfer">Transfer</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Invoice &amp; Waktu</th>
+                    <th>Pelanggan &amp; Item</th>
+                    <th>Metode</th>
+                    <th class="text-right" id="th-trx-split">Bagi Hasil (Capster / Toko)</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="trx-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Panel Pengeluaran -->
+          <section class="panel hidden" id="panel-exp">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Kategori</th>
+                    <th>Keterangan Pengeluaran</th>
+                    <th>Dicatat Oleh</th>
+                    <th class="text-right">Nominal</th>
+                    <th class="text-right" id="th-exp-action">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="exp-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal Void Transaksi -->
+    <div id="void-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title" id="void-title">Batalkan Transaksi</h3>
+          <button type="button" class="btn-icon" id="close-void-modal">✕</button>
+        </div>
+        <form id="void-form">
+          <div class="modal-body">
+            <p class="fs-xs text-secondary">
+              Membatalkan transaksi akan mengembalikan stok barang secara otomatis dan mengeluarkan komisi dari perhitungan gaji capster.
+            </p>
+            <div class="form-group">
+              <label class="form-label" for="void-reason">Alasan Pembatalan</label>
+              <input type="text" id="void-reason" class="input" placeholder="Contoh: Salah pilih capster / salah input item" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-void-modal">Batal</button>
+            <button type="submit" class="btn btn-danger">Konfirmasi Void</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Tambah Pengeluaran -->
+    <div id="exp-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="panel-title">Catat Pengeluaran Operasional</h3>
+          <button type="button" class="btn-icon" id="close-exp-modal">✕</button>
+        </div>
+        <form id="exp-form">
+          <div class="modal-body">
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="exp-date">Tanggal</label>
+                <input type="date" id="exp-date" class="input mono" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="exp-cat">Kategori</label>
+                <select id="exp-cat" class="select">
+                  <option value="Perlengkapan Barber">Perlengkapan Barber</option>
+                  <option value="Operasional">Operasional</option>
+                  <option value="Listrik & Air">Listrik &amp; Air</option>
+                  <option value="Sewa Tempat">Sewa Tempat</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="exp-desc">Keterangan</label>
+              <input type="text" id="exp-desc" class="input" placeholder="Contoh: Beli silet Astra, bedak, tisu leher" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="exp-amount">Nominal (Rp)</label>
+              <input type="number" id="exp-amount" class="input mono" min="1000" step="1000" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="cancel-exp-modal">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan Pengeluaran</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      (async function () {
+        var ctx = await window.BarberLayout.init('transaksi', 'Transaksi & Kas');
+        if (!ctx) return;
+
+        var FE = window.FinanceEngine;
+        var DB = window.BarberDB;
+        var isKasir = ctx.user.role === 'kasir';
+        var activeTab = 'trx';
+        var methodFilter = 'all';
+        var voidTargetId = null;
+
+        if (isKasir) {
+          document.getElementById('trx-page-title').textContent = 'Riwayat Transaksi Hari Ini';
+          document.getElementById('trx-page-sub').textContent = 'Daftar transaksi shift hari ini untuk pengecekan dan cetak ulang struk.';
+          document.getElementById('th-trx-split').classList.add('hidden');
+        } else {
+          document.getElementById('trx-exp-tabs').classList.remove('hidden');
+        }
+        if (!ctx.perms.canVoidTransaction) {
+          document.getElementById('th-exp-action').classList.add('hidden');
+        }
+        document.getElementById('exp-date').value = FE.todayYmd();
+
+        async function renderAll() {
+          var db = await DB.loadState();
+          var q = document.getElementById('trx-search').value.trim().toLowerCase();
+          var today = FE.todayYmd();
+
+          var trxList = db.transactions.filter(function (t) {
+            if (isKasir && String(t.createdAt).slice(0, 10) !== today) return false;
+            if (methodFilter !== 'all' && t.paymentMethod !== methodFilter) return false;
+            if (!q) return true;
+            return (
+              t.invoiceNo.toLowerCase().includes(q) ||
+              (t.customerName || '').toLowerCase().includes(q) ||
+              (t.items || []).some(function (i) {
+                return i.name.toLowerCase().includes(q) || (i.capsterName && i.capsterName.toLowerCase().includes(q));
+              })
+            );
+          });
+
+          var trxBody = document.getElementById('trx-tbody');
+          trxBody.innerHTML = trxList.length
+            ? trxList.map(function (t) {
+                var isVoid = t.status === 'void';
+                var sum = FE.calculateCartSummary(t.items, t.discount, t.paidAmount);
+                var itemsText = (t.items || [])
+                  .map(function (i) { return i.qty + '× ' + i.name + (i.capsterName ? ' (' + i.capsterName + ')' : ''); })
+                  .join(', ');
+                return (
+                  '<tr class="' + (isVoid ? 'row-void' : '') + '">' +
+                    '<td class="nowrap">' +
+                      '<div class="mono fs-xs fw-600">' + t.invoiceNo + (t.synced === false ? ' <span class="text-brass fs-11">· Offline</span>' : '') + '</div>' +
+                      '<div class="fs-11 text-muted">' + FE.formatDateTime(t.createdAt) + ' · ' + t.cashierName + '</div>' +
+                    '</td>' +
+                    '<td>' +
+                      '<div class="fs-xs fw-600">' + (t.customerName || 'Walk-in') + (isVoid ? ' <span class="text-red">[VOID: ' + (t.voidReason || '-') + ']</span>' : '') + '</div>' +
+                      '<div class="fs-11 text-muted truncate" style="max-width:340px;">' + itemsText + '</div>' +
+                    '</td>' +
+                    '<td class="nowrap mono fs-xs" style="text-transform:uppercase;">' + t.paymentMethod + '</td>' +
+                    (!isKasir
+                      ? '<td class="text-right nowrap mono fs-xs"><span class="text-brass">' + FE.formatRupiah(sum.totalCapsterShare) + '</span> / <span class="text-green">' + FE.formatRupiah(Math.max(0, sum.totalShopGross)) + '</span></td>'
+                      : '') +
+                    '<td class="text-right nowrap mono fs-xs fw-700">' + FE.formatRupiah(t.total) + '</td>' +
+                    '<td class="text-right nowrap">' +
+                      '<button type="button" class="btn btn-outline btn-sm" data-reprint="' + t.id + '">Struk</button> ' +
+                      (ctx.perms.canVoidTransaction && !isVoid
+                        ? '<button type="button" class="btn btn-danger-outline btn-sm" data-void="' + t.id + '">Void</button>'
+                        : '') +
+                    '</td>' +
+                  '</tr>'
+                );
+              }).join('')
+            : '<tr><td colspan="6" class="text-center fs-xs text-muted" style="padding:30px;">Tidak ada transaksi yang sesuai filter.</td></tr>';
+
+          trxBody.querySelectorAll('[data-reprint]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var t = db.transactions.find(function (x) { return x.id === b.getAttribute('data-reprint'); });
+              if (t) window.ThermalPrinter.openTransactionModal(t, db.settings);
+            });
+          });
+          trxBody.querySelectorAll('[data-void]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var t = db.transactions.find(function (x) { return x.id === b.getAttribute('data-void'); });
+              if (!t) return;
+              voidTargetId = t.id;
+              document.getElementById('void-title').textContent = 'Batalkan Transaksi ' + t.invoiceNo;
+              document.getElementById('void-reason').value = '';
+              document.getElementById('void-modal').classList.remove('hidden');
+            });
+          });
+
+          // Render Expenses
+          var expBody = document.getElementById('exp-tbody');
+          expBody.innerHTML = db.expenses.length
+            ? db.expenses.map(function (e) {
+                return (
+                  '<tr>' +
+                    '<td class="nowrap mono fs-xs">' + FE.formatDateShort(e.date) + '</td>' +
+                    '<td class="nowrap fs-xs fw-600">' + e.category + '</td>' +
+                    '<td class="fs-xs">' + e.description + '</td>' +
+                    '<td class="nowrap fs-xs text-muted">' + e.createdBy + '</td>' +
+                    '<td class="text-right nowrap mono fs-xs fw-600 text-red">-' + FE.formatRupiah(e.amount) + '</td>' +
+                    (ctx.perms.canVoidTransaction
+                      ? '<td class="text-right nowrap"><button type="button" class="btn btn-danger-outline btn-sm" data-del-exp="' + e.id + '">Hapus</button></td>'
+                      : '') +
+                  '</tr>'
+                );
+              }).join('')
+            : '<tr><td colspan="6" class="text-center fs-xs text-muted" style="padding:30px;">Belum ada pengeluaran tercatat.</td></tr>';
+
+          if (ctx.perms.canVoidTransaction) {
+            expBody.querySelectorAll('[data-del-exp]').forEach(function (b) {
+              b.addEventListener('click', async function () {
+                var id = b.getAttribute('data-del-exp');
+                await DB.hapusPengeluaran(id);
+                renderAll();
+              });
+            });
+          }
+        }
+
+        document.querySelectorAll('#trx-exp-tabs button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            document.querySelectorAll('#trx-exp-tabs button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            activeTab = b.getAttribute('data-tab');
+            document.getElementById('panel-trx').classList.toggle('hidden', activeTab !== 'trx');
+            document.getElementById('panel-exp').classList.toggle('hidden', activeTab !== 'exp');
+            document.getElementById('btn-add-exp').classList.toggle('hidden', activeTab !== 'exp' || !ctx.perms.canRecordExpenses);
+          });
+        });
+
+        document.querySelectorAll('#method-filter button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            document.querySelectorAll('#method-filter button').forEach(function (x) { x.classList.remove('active'); });
+            b.classList.add('active');
+            methodFilter = b.getAttribute('data-method');
+            renderAll();
+          });
+        });
+
+        document.getElementById('trx-search').addEventListener('input', renderAll);
+
+        document.getElementById('close-void-modal').addEventListener('click', function () { document.getElementById('void-modal').classList.add('hidden'); });
+        document.getElementById('cancel-void-modal').addEventListener('click', function () { document.getElementById('void-modal').classList.add('hidden'); });
+        document.getElementById('void-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          if (!voidTargetId) return;
+          var reason = document.getElementById('void-reason').value.trim();
+          await DB.voidTransaksi(voidTargetId, reason);
+          voidTargetId = null;
+          document.getElementById('void-modal').classList.add('hidden');
+          renderAll();
+        });
+
+        document.getElementById('btn-add-exp').addEventListener('click', function () { document.getElementById('exp-modal').classList.remove('hidden'); });
+        document.getElementById('close-exp-modal').addEventListener('click', function () { document.getElementById('exp-modal').classList.add('hidden'); });
+        document.getElementById('cancel-exp-modal').addEventListener('click', function () { document.getElementById('exp-modal').classList.add('hidden'); });
+        document.getElementById('exp-form').addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var exp = {
+            id: DB.generateId('exp'),
+            date: document.getElementById('exp-date').value,
+            category: document.getElementById('exp-cat').value,
+            description: document.getElementById('exp-desc').value.trim(),
+            amount: Math.max(0, Math.round(Number(document.getElementById('exp-amount').value) || 0)),
+            createdBy: ctx.user.name,
+            createdAt: new Date().toISOString(),
+          };
+          await DB.simpanPengeluaran(exp);
+          document.getElementById('exp-desc').value = '';
+          document.getElementById('exp-amount').value = '';
+          document.getElementById('exp-modal').classList.add('hidden');
+          renderAll();
+        });
+
+        renderAll();
+      })();
+    </script>
+  </body>
+</html>
