@@ -312,18 +312,21 @@
       });
 
       var totalEarnedCommission = serviceCommission + productCommission;
-      var alreadyPaidInPeriod = payrolls
-        .filter(function (p) {
-          return (
-            p.capsterId === capster.id &&
-            p.periodEnd >= periodStart &&
-            p.periodStart <= periodEnd
-          );
-        })
-        .reduce(function (sum, p) {
-          return sum + (Number(p.serviceCommission) || 0) + (Number(p.productCommission) || 0);
-        }, 0);
-
+      var payrollsInPeriod = payrolls.filter(function (p) {
+        return (
+          p.capsterId === capster.id &&
+          p.periodEnd >= periodStart &&
+          p.periodStart <= periodEnd
+        );
+      });
+      var paidServiceCommission = payrollsInPeriod.reduce(function (sum, p) {
+        return sum + (Number(p.serviceCommission) || 0);
+      }, 0);
+      var paidProductCommission = payrollsInPeriod.reduce(function (sum, p) {
+        return sum + (Number(p.productCommission) || 0);
+      }, 0);
+      var alreadyPaidInPeriod = paidServiceCommission + paidProductCommission;
+      
       return {
         capster: capster,
         serviceCount: serviceCount,
@@ -334,6 +337,8 @@
         totalEarnedCommission: totalEarnedCommission,
         alreadyPaidInPeriod: alreadyPaidInPeriod,
         remainingCommission: Math.max(0, totalEarnedCommission - alreadyPaidInPeriod),
+        remainingServiceCommission: Math.max(0, serviceCommission - paidServiceCommission),
+        remainingProductCommission: Math.max(0, productCommission - paidProductCommission),
       };
     });
   }
@@ -341,8 +346,8 @@
   function calculatePayrollNetPay(summary, allowance, bonus, deductions) {
     return Math.max(
       0,
-      (Number(summary.serviceCommission) || 0) +
-        (Number(summary.productCommission) || 0) +
+      (Number(summary.remainingServiceCommission) || 0) +
+        (Number(summary.remainingProductCommission) || 0) +
         (Number(allowance) || 0) +
         (Number(bonus) || 0) -
         (Number(deductions) || 0)
