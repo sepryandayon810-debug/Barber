@@ -259,7 +259,7 @@
 
           var tbody = document.getElementById('payroll-calc-tbody');
           tbody.innerHTML = rows.map(function (r) {
-            var est = r.totalEarnedCommission + (r.capster.baseAllowance || 0);
+            var est = r.remainingCommission + (r.capster.baseAllowance || 0);
             return (
               '<tr>' +
                 '<td><div class="fw-600">' + r.capster.name + '</div><div class="fs-11 text-muted">' + r.capster.specialty + ' · ' + r.capster.phone + '</div></td>' +
@@ -287,8 +287,8 @@
                 document.getElementById('payout-title').textContent = 'Cairkan Gaji — ' + target.capster.name;
                 document.getElementById('payout-period-label').textContent = 'Periode ' + FE.formatDateShort(start) + ' s/d ' + FE.formatDateShort(end);
                 document.getElementById('po-srv-label').textContent = 'Komisi Jasa (' + target.serviceCount + ' layanan)';
-                document.getElementById('po-srv-val').textContent = FE.formatRupiah(target.serviceCommission);
-                document.getElementById('po-prd-val').textContent = FE.formatRupiah(target.productCommission);
+                document.getElementById('po-srv-val').textContent = FE.formatRupiah(target.remainingServiceCommission);
+                document.getElementById('po-prd-val').textContent = FE.formatRupiah(target.remainingProductCommission);
                 document.getElementById('po-allowance').value = target.capster.baseAllowance || 0;
                 document.getElementById('po-bonus').value = 0;
                 document.getElementById('po-deduct').value = 0;
@@ -341,6 +341,10 @@
         document.getElementById('payout-form').addEventListener('submit', async function (e) {
           e.preventDefault();
           if (!activePayoutTarget) return;
+          if (activePayoutTarget.remainingCommission <= 0) {
+            alert('Komisi ' + activePayoutTarget.capster.name + ' untuk periode ini sudah dibayar penuh.');
+            return;
+          }
           var allowance = Math.max(0, Number(document.getElementById('po-allowance').value) || 0);
           var bonus = Math.max(0, Number(document.getElementById('po-bonus').value) || 0);
           var deduct = Math.max(0, Number(document.getElementById('po-deduct').value) || 0);
@@ -356,8 +360,8 @@
             periodEnd: endEl.value,
             serviceCount: activePayoutTarget.serviceCount,
             grossServiceRevenue: activePayoutTarget.grossServiceRevenue,
-            serviceCommission: activePayoutTarget.serviceCommission,
-            productCommission: activePayoutTarget.productCommission,
+            serviceCommission: activePayoutTarget.remainingServiceCommission,
+            productCommission: activePayoutTarget.remainingProductCommission,
             baseAllowance: allowance,
             bonus: bonus,
             deductions: deduct,
